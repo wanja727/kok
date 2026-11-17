@@ -138,6 +138,7 @@ public class ContentImporter {
         String answer = switch (type) {
             case MULTIPLE_CHOICE, CODE_PREDICT -> String.valueOf(Integer.parseInt(def.answer().trim()));
             case OX -> def.answer().trim().toUpperCase(Locale.ROOT);
+            case LINE_PICK -> LinePicks.normalize(def.answer(), LinePicks.lineCount(def.code())).orElseThrow();
             case DESCRIPTIVE -> null;
         };
         return new QuestionContent(

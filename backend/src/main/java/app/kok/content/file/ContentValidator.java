@@ -1,5 +1,6 @@
 package app.kok.content.file;
 
+import app.kok.content.LinePicks;
 import app.kok.content.QuestionPurpose;
 import app.kok.content.QuestionStatus;
 import app.kok.content.QuestionType;
@@ -142,7 +143,7 @@ public final class ContentValidator {
 
         QuestionType type = typeOf(q.type());
         if (type == null) {
-            errors.add(label + ": type은 multiple_choice, ox, code_predict, descriptive 중 하나다");
+            errors.add(label + ": type은 multiple_choice, ox, code_predict, line_pick, descriptive 중 하나다");
             return;
         }
 
@@ -174,6 +175,18 @@ public final class ContentValidator {
                 }
                 if (q.checklist() != null) {
                     errors.add(label + ": 체크리스트는 서술형(descriptive)에만 쓴다");
+                }
+            }
+            case LINE_PICK -> {
+                int lines = LinePicks.lineCount(q.code());
+                if (lines == 0) {
+                    errors.add(label + ": 줄 고르기 문제는 code가 필요하다");
+                } else if (LinePicks.normalize(q.answer(), lines).isEmpty()) {
+                    errors.add(label + ": answer는 줄 번호(1~" + lines + ")를 쉼표로 나열한다. 예: 7, 8. 지금 값: "
+                            + q.answer());
+                }
+                if (q.choices() != null || q.checklist() != null) {
+                    errors.add(label + ": 줄 고르기 문제에는 choices와 checklist를 쓰지 않는다");
                 }
             }
             case DESCRIPTIVE -> {

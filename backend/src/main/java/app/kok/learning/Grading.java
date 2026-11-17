@@ -1,5 +1,6 @@
 package app.kok.learning;
 
+import app.kok.content.LinePicks;
 import app.kok.content.QuestionCatalog.GradableQuestion;
 import java.util.Locale;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,11 @@ final class Grading {
                     return upper;
                 }
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OX 문제의 답은 O 또는 X다");
+            }
+            case LINE_PICK -> {
+                int lines = LinePicks.lineCount(question.code());
+                return LinePicks.normalize(raw, lines).orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "줄 번호(1~" + lines + ")를 쉼표로 나열한다"));
             }
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "자동 채점하는 문제가 아니다");
         }
