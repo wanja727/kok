@@ -1,0 +1,10 @@
+# 로컬 개발용 DB. 운영 설정이 아니다
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: kok
+      POSTGRES_USER: kok
+      POSTGRES_PASSWORD: kok
+    ports:
+      - "5432:5432"

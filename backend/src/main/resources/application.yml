@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: kok
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  mvc:
+    problemdetails:
+      enabled: true
+
+kok:
+  auth:
+    # 1주차 임시 로그인: X-Dev-User-Id 헤더로 사용자를 정한다. 운영에서는 끈다 (2주차에 OAuth로 바꾼다)
+    dev-header: false
