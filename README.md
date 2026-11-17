@@ -21,6 +21,18 @@ AI에게 물으면 답은 바로 나오지만, 쉽게 얻은 답은 쉽게 잊�
 - 로그인은 OAuth만 쓴다. 비밀번호를 저장하지 않는다 (카카오 먼저)
 - 프론트(Next.js 모바일 웹)는 3주차에 추가한다
 
+## API (1주차)
+
+| 요청 | 내용 |
+| --- | --- |
+| `GET /api/lessons` | 레슨 목록 (단원·레슨 순서) |
+| `GET /api/lessons/{id}/questions` | 레슨의 판정 문제. 정답과 해설은 담지 않는다 |
+| `POST /api/submissions` | 답 제출. `clientSubmissionId`, `questionVersionId`, `selected`, `confidence`(SURE/UNSURE/UNKNOWN) 필수. 응답에서 처음으로 정답과 해설을 준다 |
+| `GET /api/me/delayed-checks/today` | 오늘 확인할 개념과, 개념마다 처음과 다른 문제 하나. 답은 `mode: DELAYED_CHECK`로 제출 |
+
+- 1주차 로그인은 임시다. `kok.auth.dev-header=true`일 때만 `X-Dev-User-Id` 헤더로 사용자를 정한다 (로컬·테스트). 2주차에 카카오 OAuth와 Redis 세션으로 바꾼다
+- 문제는 시작할 때 `kok.content.import-dir`의 YAML 파일에서 가져온다. 형식: [docs/content-format.md](docs/content-format.md)
+
 ## 실행
 
 테스트는 Docker(Testcontainers)가 필요하다.

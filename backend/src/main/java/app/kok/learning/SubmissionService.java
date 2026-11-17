@@ -1,0 +1,90 @@
+package app.kok.learning;
+
+import app.kok.common.ServiceDates;
+import app.kok.content.QuestionCatalog;
+import app.kok.content.QuestionCatalog.GradableQuestion;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+/**
+ * 답안 제출 (가장 중요한 쓰기 경로). 한 트랜잭션 안에서 채점 → 제출 기록 → 지연 확인 예약 또는 결과 기록.
+ * XP·스트릭·복습 단계는 2주차에 이 트랜잭션에 더한다.
+ */
+@Service
+class SubmissionService {
+
+    private final AnswerSubmissionRepository submissions;
+    private final QuestionCatalog catalog;
+    private final DelayedChecks delayedChecks;
+    private final Clock clock;
+
+    SubmissionService(AnswerSubmissionRepository submissions, QuestionCatalog catalog,
+            DelayedChecks delayedChecks, Clock clock) {
+        this.submissions = submissions;
+        this.catalog = catalog;
+        this.delayedChecks = delayedChecks;
+        this.clock = clock;
+    }
+
+    @Transactional
+    public SubmissionResult submit(long userId, SubmitRequest request) {
+        Optional<AnswerSubmission> existing =
+                submissions.findByUserIdAndClientSubmissionId(userId, request.clientSubmissionId());
+        if (existing.isPresent()) {
+            return toResult(existing.get());
+        }
+
+        GradableQuestion question = catalog.findGradable(request.questionVersionId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "풀 수 있는 문제가 아니다"));
+        String selected = Grading.normalize(question, request.selected());
+        boolean correct = selected.equals(question.answer());
+
+        Instant now = clock.instant();
+        LocalDate today = ServiceDates.of(now);
+        boolean delayedCheck = request.modeOrDefault() == SubmissionMode.DELAYED_CHECK;
+
+        // 제출 기록을 먼저 넣는다. 같은 제출이 동시에 오면 여기서 유니크 제약에 걸려 뒤의 작업을 하지 않는다
+        AnswerSubmission submission = submissions.saveAndFlush(new AnswerSubmission(
+                userId, question.versionId(), request.clientSubmissionId(), selected,
+                request.confidence(), correct, delayedCheck, today, now));
+
+        if (delayedCheck) {
+            delayedChecks.complete(userId, question.conceptId(), today, question.versionId(), correct, now)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                            "이 개념은 오늘 지연 확인이 예정되어 있지 않다"));
+        } else {
+            delayedChecks.scheduleIfFirst(userId, question.conceptId(), today);
+        }
+
+        return toResult(submission, question);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<SubmissionResult> findExisting(long userId, UUID clientSubmissionId) {
+        return submissions.findByUserIdAndClientSubmissionId(userId, clientSubmissionId).map(this::toResult);
+    }
+
+    private SubmissionResult toResult(AnswerSubmission submission) {
+        GradableQuestion question = catalog.findAnswered(submission.getQuestionVersionId()).orElseThrow();
+        return toResult(submission, question);
+    }
+
+    private static SubmissionResult toResult(AnswerSubmission submission, GradableQuestion question) {
+        return new SubmissionResult(
+                submission.getId(),
+                submission.isCorrect(),
+                submission.getSelected(),
+                question.answer(),
+                submission.getConfidence(),
+                question.explanation(),
+                question.sourceUrl(),
+                submission.isDelayedCheck());
+    }
+}
