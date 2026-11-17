@@ -35,6 +35,16 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+// 문제 파일 형식 검사 (콘텐츠 저장소 CI용). 스프링과 DB 없이 돈다
+// 예: gradle -p backend checkContent -PcontentDir=../dev-lessons/content/questions
+tasks.register('checkContent', JavaExec) {
+    group = 'verification'
+    description = '문제 파일(YAML) 형식을 검사한다. -PcontentDir=<디렉터리>'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'app.kok.content.file.ContentCheck'
+    args = [project.findProperty('contentDir') ?: 'missing-contentDir']
+}
+
 tasks.named('test') {
     useJUnitPlatform()
     testLogging {
