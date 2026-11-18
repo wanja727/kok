@@ -1,8 +1,8 @@
-import { ApiError, type KokApi, type LessonSummary, type SubmissionResult, type SubmitRequest, type TodayCheck } from "./types";
+import { ApiError, type RetrievoApi, type LessonSummary, type SubmissionResult, type SubmitRequest, type TodayCheck } from "./types";
 
 /*
  * 실제 백엔드 클라이언트. /api 요청은 next.config의 rewrites가 Spring으로 보낸다 (같은 도메인, ADR-010).
- * 로그인은 아직 임시다: 백엔드의 kok.auth.dev-header=true일 때 X-Dev-User-Id 헤더로 사용자를 정한다.
+ * 로그인은 아직 임시다: 백엔드의 retrievo.auth.dev-header=true일 때 X-Dev-User-Id 헤더로 사용자를 정한다.
  * 카카오 로그인과 Redis 세션이 붙으면 이 헤더를 빼고 세션 쿠키만 쓴다.
  */
 const devUserId = process.env.NEXT_PUBLIC_DEV_USER_ID;
@@ -27,7 +27,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export const httpApi: KokApi = {
+export const httpApi: RetrievoApi = {
   todayChecks: () => request<TodayCheck[]>("/api/me/delayed-checks/today"),
   lessons: () => request<LessonSummary[]>("/api/lessons"),
   submit: (body: SubmitRequest) =>

@@ -1,5 +1,5 @@
 import { isCorrect } from "../grading";
-import type { KokApi, LessonSummary, QuestionView, SubmissionResult, TodayCheck } from "./types";
+import type { RetrievoApi, LessonSummary, QuestionView, SubmissionResult, TodayCheck } from "./types";
 
 /*
  * 백엔드 없이 화면을 개발하는 목 API. 응답 형식은 실제 API와 같다.
@@ -108,7 +108,7 @@ function delay<T>(value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), 150));
 }
 
-export const mockApi: KokApi = {
+export const mockApi: RetrievoApi = {
   todayChecks: () =>
     delay<TodayCheck[]>(
       [...questions]

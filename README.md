@@ -1,8 +1,8 @@
-# 콕
+# Retrievo
 
-> 잊을 때쯤 콕, 3분 퀴즈
+> 꺼낼수록 지식이 쌓이는 인출 효과 기반 학습 서비스
 
-AI에게 물으면 답은 바로 나오지만, 쉽게 얻은 답은 쉽게 잊는다. 콕은 답을 먼저 떠올리게 하고(인출 연습), 잊을 때쯤 다른 문제로 다시 묻는(간격 반복) 학습 앱이다. 첫 주제는 개발자 면접 대비다.
+AI에게 물으면 답은 바로 나오지만, 쉽게 얻은 답은 쉽게 잊는다. Retrievo(리트리보)는 답을 먼저 떠올리게 하고(인출 연습), 잊을 때쯤 다른 문제로 다시 묻는(간격 반복) 학습 앱이다. 첫 주제는 개발자 면접 대비다.
 
 ## 핵심 루프
 
@@ -33,8 +33,8 @@ AI에게 물으면 답은 바로 나오지만, 쉽게 얻은 답은 쉽게 잊�
 | `GET /api/me/delayed-checks/today` | 오늘 확인할 개념과, 개념마다 처음과 다른 문제 하나. 확실했는데 틀린 개념이 먼저 온다. 답은 `mode: DELAYED_CHECK`로 제출 |
 | `GET /api/me/concepts` | 풀어 본 개념의 진행 상태: 통과한 확인 수(0 = 배우는 중, 4 = 졸업), 다음 확인 날 |
 
-- 1주차 로그인은 임시다. `kok.auth.dev-header=true`일 때만 `X-Dev-User-Id` 헤더로 사용자를 정한다 (로컬·테스트). 2주차에 카카오 OAuth와 Redis 세션으로 바꾼다
-- 문제는 시작할 때 `kok.content.import-dir`의 YAML 파일에서 가져온다. 형식: [docs/content-format.md](docs/content-format.md)
+- 1주차 로그인은 임시다. `retrievo.auth.dev-header=true`일 때만 `X-Dev-User-Id` 헤더로 사용자를 정한다 (로컬·테스트). 2주차에 카카오 OAuth와 Redis 세션으로 바꾼다
+- 문제는 시작할 때 `retrievo.content.import-dir`의 YAML 파일에서 가져온다. 형식: [docs/content-format.md](docs/content-format.md)
 
 ## 실행
 
@@ -44,3 +44,11 @@ AI에게 물으면 답은 바로 나오지만, 쉽게 얻은 답은 쉽게 잊�
 cd backend
 gradle test
 ```
+
+로컬에서 서버 띄우기 (JDK 21, Docker 필요):
+
+1. 저장소 루트에서 `docker compose up -d`로 PostgreSQL을 띄운다 (DB·계정·비밀번호 `retrievo`)
+2. IntelliJ에서 `backend`를 Gradle 프로젝트로 연다. Gradle 배포는 "래퍼 작업"(build.gradle의 8.14.3), Gradle JVM은 21
+3. `RetrievoApplication`을 실행한다. 활성 프로필 `local`, 프로그램 인수 `--retrievo.content.import-dir=<dev-lessons>/content/questions`
+4. 임시 로그인용 사용자를 넣는다: `docker compose exec postgres psql -U retrievo -d retrievo -c "insert into users (nickname) values ('me') returning id;"`
+5. `curl -H "X-Dev-User-Id: 1" http://localhost:8080/api/lessons`로 확인한다

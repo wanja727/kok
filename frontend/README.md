@@ -11,7 +11,7 @@ pnpm dev
 
 - 기본은 **목 API**다. 백엔드 없이 `http://localhost:3000`에서 오늘 화면과 꺼내기 흐름을 끝까지 볼 수 있다
 - 실제 백엔드에 붙이려면 `.env.example`을 `.env.local`로 복사하고 `NEXT_PUBLIC_API_MODE=http`로 바꾼다. 백엔드는 `local` 프로필로 띄운다 (`X-Dev-User-Id` 임시 로그인)
-- `/api/*` 요청은 `next.config.ts`의 rewrites가 `KOK_API_ORIGIN`(기본 `http://localhost:8080`)으로 보낸다. 브라우저에는 같은 도메인으로 보인다 (ADR-010)
+- `/api/*` 요청은 `next.config.ts`의 rewrites가 `RETRIEVO_API_ORIGIN`(기본 `http://localhost:8080`)으로 보낸다. 브라우저에는 같은 도메인으로 보인다 (ADR-010)
 
 ## 검사
 

@@ -1,10 +1,10 @@
 # 로컬 실행: 저장소 루트의 compose.yaml로 PostgreSQL을 띄운 뒤 --spring.profiles.active=local
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/kok
-    username: kok
-    password: kok
+    url: jdbc:postgresql://localhost:5432/retrievo
+    username: retrievo
+    password: retrievo
 
-kok:
+retrievo:
   auth:
     dev-header: true

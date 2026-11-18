@@ -79,7 +79,7 @@ export interface SubmissionResult {
   delayedCheck: boolean;
 }
 
-export interface KokApi {
+export interface RetrievoApi {
   todayChecks(): Promise<TodayCheck[]>;
   lessons(): Promise<LessonSummary[]>;
   submit(request: SubmitRequest): Promise<SubmissionResult>;
