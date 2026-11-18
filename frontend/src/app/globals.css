@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/*
+ * Retrievo 디자인 토큰 (노션 ADR-018)
+ * - 흰 바탕에 검은 글자가 기본. 카드와 그림자 대신 얇은 선과 여백
+ * - 골드는 "꺼내기에 성공했다"는 뜻으로만 쓴다 (통과한 확인, 졸업, 성장, 직접 체크한 항목)
+ * - 빨강은 틀림 관련 표시의 작은 점으로만 쓴다
+ */
+@theme {
+  --color-ink: #0a0a0a;
+  --color-ink-2: #262626;
+  --color-sub: #525252;
+  --color-muted: #737373;
+  --color-soft: #8a8a8a;
+  --color-faint: #a3a3a3;
+  --color-line: #ededed;
+  --color-line-strong: #e5e5e5;
+  --color-surface: #f7f7f7;
+  --color-gold: #f2a20c;
+  --color-wrong: #e5484d;
+  --color-code: #0b0b0c;
+
+  --font-sans: var(--font-inter-tight), var(--font-noto-sans-kr), sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+html {
+  background: var(--color-ink);
+}
+
+body {
+  background: #ffffff;
+  color: var(--color-ink);
+  word-break: keep-all;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 앱은 모바일 웹이다. 넓은 화면에서는 가운데 폰 폭으로만 보여준다 */
+.app-frame {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fade-up {
+    animation: fade-up 240ms ease-out both;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

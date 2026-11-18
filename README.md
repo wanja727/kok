@@ -15,11 +15,12 @@ AI에게 물으면 답은 바로 나오지만, 쉽게 얻은 답은 쉽게 잊�
 | 경로 | 내용 |
 | --- | --- |
 | `backend/` | Java 21, Spring Boot 3.5, JPA, PostgreSQL, Flyway. 모듈러 모놀리스 |
+| `frontend/` | Next.js 16, TypeScript, Tailwind CSS v4. 모바일 웹. [frontend/README.md](frontend/README.md) |
 | `docs/` | 문제 파일 형식 등 |
 
 - 문제 원본은 이 저장소가 아니라 콘텐츠 저장소의 파일이다. 개발 주제는 [dev-lessons](https://github.com/wanja727/dev-lessons)
 - 로그인은 OAuth만 쓴다. 비밀번호를 저장하지 않는다 (카카오 먼저)
-- 프론트(Next.js 모바일 웹)는 3주차에 추가한다
+- 프론트는 백엔드 없이도 목 API로 실행된다. 지금은 오늘 화면과 오늘의 지연 확인(답 먼저 적기 → 보기와 확신도 → 해설)까지 있다
 
 ## API (1주차)
 
