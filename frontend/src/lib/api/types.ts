@@ -25,10 +25,29 @@ export interface QuestionView {
 export interface TodayCheck {
   conceptId: number;
   conceptName: string;
-  /** 1 = 3일 뒤 확인, 2 = 7일 뒤 확인 */
+  /** 이번 확인 전까지 통과한 확인 수(1~3). 1 = 3일, 2 = 7일, 3 = 21일 확인. 4가 되면 졸업 */
   attemptNo: number;
   dueDate: string;
+  /** 배운 날 기준(같은 날 3번 정답)을 통과한 날 */
+  learnedOn: string | null;
+  /** 지난 확인에서 확실했는데 틀려서 다음 날 다시 묻는 개념. 목록 맨 앞에 온다 */
+  sureWrong: boolean;
   question: QuestionView;
+}
+
+/** 풀어 본 개념의 진행 상태 */
+export interface ConceptStatus {
+  conceptId: number;
+  conceptName: string;
+  lessonId: number;
+  lessonTitle: string;
+  /** 통과한 확인 수. 0 = 배우는 중, 4 = 졸업 */
+  stage: number;
+  graduated: boolean;
+  learnedOn: string | null;
+  dueDate: string | null;
+  sureWrong: boolean;
+  graduatedAt: string | null;
 }
 
 export interface LessonSummary {

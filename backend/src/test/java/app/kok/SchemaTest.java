@@ -11,7 +11,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 class SchemaTest extends IntegrationTest {
 
     @Test
-    void Flyway가_1주차_테이블을_만든다() {
+    void Flyway가_테이블을_만든다() {
         List<String> tables = jdbc.queryForList("""
                 select table_name from information_schema.tables
                 where table_schema = 'public' and table_name <> 'flyway_schema_history'
@@ -19,7 +19,7 @@ class SchemaTest extends IntegrationTest {
                 """, String.class);
 
         assertThat(tables).containsExactly(
-                "answer_submission", "concept", "delayed_check", "lesson", "question",
+                "answer_submission", "concept", "concept_progress", "delayed_check", "lesson", "question",
                 "question_version", "subject", "unit", "user_identity", "users");
     }
 

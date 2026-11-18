@@ -1,9 +1,10 @@
+import type { TodayCheck } from "./api/types";
+
 /*
  * 확인 일정 표시 (ADR-017: 배운 날 3번 정답, 그 뒤 3일·7일·21일 재확인, 네 번 통과하면 졸업).
- * 백엔드의 지연 확인은 아직 3일(attemptNo=1)·7일(attemptNo=2)뿐이다. 21일 확인은 백엔드에 더한 뒤 맞춘다.
+ * 단계 계산은 백엔드 ReviewSchedule이 한다. 화면은 받은 값을 문장으로만 바꾼다.
  */
 
-const DAYS_BY_ATTEMPT: Record<number, number> = { 1: 3, 2: 7, 3: 21 };
 const ORDINAL = ["", "첫 번째", "두 번째", "세 번째"];
 
 /** 오늘 확인 전까지 통과한 확인 수. 배운 날 통과 + 그 전 재확인 */
@@ -11,11 +12,18 @@ export function passedChecks(attemptNo: number): number {
   return attemptNo;
 }
 
+/** 두 날짜(YYYY-MM-DD) 사이의 날 수 */
+export function daysBetween(from: string, to: string): number {
+  const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
+  return Math.round(ms / 86_400_000);
+}
+
 /** 오늘 이 개념을 묻는 이유 */
-export function checkReason(attemptNo: number): string {
-  const days = DAYS_BY_ATTEMPT[attemptNo];
-  const nth = ORDINAL[attemptNo] ?? `${attemptNo}번째`;
-  return days ? `배운 지 ${days}일 · ${nth} 재확인` : `${nth} 재확인`;
+export function checkReason(check: Pick<TodayCheck, "attemptNo" | "dueDate" | "learnedOn" | "sureWrong">): string {
+  if (check.sureWrong) return "확실했는데 틀린 개념 · 다시 확인";
+  const nth = `${ORDINAL[check.attemptNo] ?? `${check.attemptNo}번째`} 재확인`;
+  if (!check.learnedOn) return nth;
+  return `배운 지 ${daysBetween(check.learnedOn, check.dueDate)}일 · ${nth}`;
 }
 
 /** 개념 하나에 2분으로 잡는다 */

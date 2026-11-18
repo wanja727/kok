@@ -73,7 +73,12 @@ const conceptNames: Record<number, string> = {
   13: "DB · 격리 수준과 팬텀 리드",
 };
 
-const attempts: Record<number, number> = { 11: 1, 12: 1, 13: 2 };
+/** 개념마다 통과한 확인 수, 배운 지 며칠, 확실했는데 틀렸는지. 목록 순서도 백엔드처럼 확실했는데 틀린 개념이 먼저다 */
+const progress: Record<number, { attemptNo: number; learnedDaysAgo: number; sureWrong: boolean }> = {
+  12: { attemptNo: 1, learnedDaysAgo: 8, sureWrong: true },
+  11: { attemptNo: 1, learnedDaysAgo: 3, sureWrong: false },
+  13: { attemptNo: 2, learnedDaysAgo: 7, sureWrong: false },
+};
 
 const lessons: LessonSummary[] = [
   { id: 1, unit: "JPA", title: "N+1 문제", questionCount: 8 },
@@ -93,8 +98,10 @@ function view(q: MockQuestion): QuestionView {
   return rest;
 }
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
+function daysAgo(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
 }
 
 function delay<T>(value: T): Promise<T> {
@@ -104,13 +111,17 @@ function delay<T>(value: T): Promise<T> {
 export const mockApi: KokApi = {
   todayChecks: () =>
     delay<TodayCheck[]>(
-      questions.map((q) => ({
-        conceptId: q.conceptId,
-        conceptName: conceptNames[q.conceptId],
-        attemptNo: attempts[q.conceptId],
-        dueDate: today(),
-        question: view(q),
-      })),
+      [...questions]
+        .sort((a, b) => Number(progress[b.conceptId].sureWrong) - Number(progress[a.conceptId].sureWrong))
+        .map((q) => ({
+          conceptId: q.conceptId,
+          conceptName: conceptNames[q.conceptId],
+          attemptNo: progress[q.conceptId].attemptNo,
+          dueDate: daysAgo(0),
+          learnedOn: daysAgo(progress[q.conceptId].learnedDaysAgo),
+          sureWrong: progress[q.conceptId].sureWrong,
+          question: view(q),
+        })),
     ),
 
   lessons: () => delay(lessons),
