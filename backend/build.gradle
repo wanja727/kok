@@ -4,12 +4,17 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
-group = 'app.kok'
+group = 'app.retrievo'
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
+}
+
+// IntelliJ의 "래퍼 작업"과 gradle wrapper가 쓰는 버전. CI와 같다
+wrapper {
+    gradleVersion = '8.14.3'
 }
 
 repositories {
@@ -41,7 +46,7 @@ tasks.register('checkContent', JavaExec) {
     group = 'verification'
     description = '문제 파일(YAML) 형식을 검사한다. -PcontentDir=<디렉터리>'
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = 'app.kok.content.file.ContentCheck'
+    mainClass = 'app.retrievo.content.file.ContentCheck'
     args = [project.findProperty('contentDir') ?: 'missing-contentDir']
 }
 

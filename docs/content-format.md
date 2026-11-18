@@ -1,6 +1,6 @@
 # 문제 파일 형식
 
-콕의 문제 원본은 콘텐츠 저장소의 YAML 파일이다. 개발 주제는 [dev-lessons](https://github.com/wanja727/dev-lessons)에 둔다. 파일 하나가 레슨 하나다. 앱은 시작할 때 이 파일들을 서비스 DB로 가져온다.
+Retrievo의 문제 원본은 콘텐츠 저장소의 YAML 파일이다. 개발 주제는 [dev-lessons](https://github.com/wanja727/dev-lessons)에 둔다. 파일 하나가 레슨 하나다. 앱은 시작할 때 이 파일들을 서비스 DB로 가져온다.
 
 - 커밋 = 문제 버전, PR 리뷰 = 검수, CI = 형식 검사
 - 주제와 상관없는 형식이다. 다른 영역(수학 등)도 같은 형식으로 각자의 콘텐츠 저장소에 둔다
@@ -70,7 +70,7 @@ questions:
 검사 규칙은 이 저장소에 하나만 둔다. 콘텐츠 저장소의 CI는 이 저장소를 내려받아 검사기를 실행한다. 스프링과 DB 없이 돈다.
 
 ```bash
-gradle -p kok/backend checkContent -PcontentDir=$PWD/content/questions
+gradle -p retrievo/backend checkContent -PcontentDir=$PWD/content/questions
 ```
 
 - 파일마다의 규칙(위 표)에 더해 파일 사이 충돌도 본다: 같은 레슨 키가 두 파일에 있음, 같은 주제 키에 이름이 다름

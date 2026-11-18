@@ -3,8 +3,8 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: kok
-      POSTGRES_USER: kok
-      POSTGRES_PASSWORD: kok
+      POSTGRES_DB: retrievo
+      POSTGRES_USER: retrievo
+      POSTGRES_PASSWORD: retrievo
     ports:
       - "5432:5432"

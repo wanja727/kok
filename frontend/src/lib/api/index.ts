@@ -1,6 +1,6 @@
 import { httpApi } from "./http";
 import { mockApi } from "./mock";
-import type { KokApi } from "./types";
+import type { RetrievoApi } from "./types";
 
 /**
  * NEXT_PUBLIC_API_MODE=http 이면 실제 백엔드, 그 밖에는 목 API를 쓴다.
@@ -8,6 +8,6 @@ import type { KokApi } from "./types";
  */
 export const apiMode: "http" | "mock" = process.env.NEXT_PUBLIC_API_MODE === "http" ? "http" : "mock";
 
-export const api: KokApi = apiMode === "http" ? httpApi : mockApi;
+export const api: RetrievoApi = apiMode === "http" ? httpApi : mockApi;
 
 export * from "./types";
