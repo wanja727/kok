@@ -33,7 +33,7 @@ public abstract class IntegrationTest {
     @BeforeEach
     void resetDatabaseAndClock() {
         jdbc.execute("""
-                truncate table delayed_check, answer_submission, question_version, question,
+                truncate table concept_progress, delayed_check, answer_submission, question_version, question,
                     concept, lesson, unit, subject, user_identity, users
                 restart identity cascade
                 """);

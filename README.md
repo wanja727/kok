@@ -8,7 +8,8 @@ AI에게 물으면 답은 바로 나오지만, 쉽게 얻은 답은 쉽게 잊�
 
 1. **답 먼저:** 답을 내기 전에는 정답과 해설을 보여주지 않는다
 2. **확신도:** 답을 내기 전에 확실 / 애매 / 모름을 고른다. "확실한데 틀린" 개념을 따로 모은다
-3. **지연 확인:** 처음 푼 뒤 3일·7일째에 같은 개념을 **다른 문제**로 다시 묻는다
+3. **지연 확인:** 배운 날 3번 맞힌 개념을 3일·7일·21일 뒤에 **다른 문제**로 다시 묻는다. 틀리면 한 단계 돌아가고, 확실했는데 틀리면 다음 날 먼저 묻는다
+4. **졸업:** 재확인 세 번을 모두 통과한 개념은 더는 묻지 않는다
 
 ## 구성
 
@@ -22,14 +23,15 @@ AI에게 물으면 답은 바로 나오지만, 쉽게 얻은 답은 쉽게 잊�
 - 로그인은 OAuth만 쓴다. 비밀번호를 저장하지 않는다 (카카오 먼저)
 - 프론트는 백엔드 없이도 목 API로 실행된다. 지금은 오늘 화면과 오늘의 지연 확인(답 먼저 적기 → 보기와 확신도 → 해설)까지 있다
 
-## API (1주차)
+## API
 
 | 요청 | 내용 |
 | --- | --- |
 | `GET /api/lessons` | 레슨 목록 (단원·레슨 순서) |
 | `GET /api/lessons/{id}/questions` | 레슨의 판정 문제. 정답과 해설은 담지 않는다 |
 | `POST /api/submissions` | 답 제출. `clientSubmissionId`, `questionVersionId`, `selected`, `confidence`(SURE/UNSURE/UNKNOWN) 필수. 응답에서 처음으로 정답과 해설을 준다 |
-| `GET /api/me/delayed-checks/today` | 오늘 확인할 개념과, 개념마다 처음과 다른 문제 하나. 답은 `mode: DELAYED_CHECK`로 제출 |
+| `GET /api/me/delayed-checks/today` | 오늘 확인할 개념과, 개념마다 처음과 다른 문제 하나. 확실했는데 틀린 개념이 먼저 온다. 답은 `mode: DELAYED_CHECK`로 제출 |
+| `GET /api/me/concepts` | 풀어 본 개념의 진행 상태: 통과한 확인 수(0 = 배우는 중, 4 = 졸업), 다음 확인 날 |
 
 - 1주차 로그인은 임시다. `kok.auth.dev-header=true`일 때만 `X-Dev-User-Id` 헤더로 사용자를 정한다 (로컬·테스트). 2주차에 카카오 OAuth와 Redis 세션으로 바꾼다
 - 문제는 시작할 때 `kok.content.import-dir`의 YAML 파일에서 가져온다. 형식: [docs/content-format.md](docs/content-format.md)

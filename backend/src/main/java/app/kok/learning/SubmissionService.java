@@ -14,22 +14,23 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * 답안 제출 (가장 중요한 쓰기 경로). 한 트랜잭션 안에서 채점 → 제출 기록 → 지연 확인 예약 또는 결과 기록.
- * XP·스트릭·복습 단계는 2주차에 이 트랜잭션에 더한다.
+ * 답안 제출 (가장 중요한 쓰기 경로). 한 트랜잭션 안에서 채점 → 제출 기록 → 개념 진행 상태 갱신.
+ * 레슨 답은 배운 날 기준(3번 정답)을 세고, 지연 확인 답은 단계를 올리거나 내린다 (ADR-017, {@link ReviewSchedule}).
+ * XP·스트릭은 2주차에 이 트랜잭션에 더한다.
  */
 @Service
 class SubmissionService {
 
     private final AnswerSubmissionRepository submissions;
     private final QuestionCatalog catalog;
-    private final DelayedChecks delayedChecks;
+    private final ConceptProgresses progresses;
     private final Clock clock;
 
     SubmissionService(AnswerSubmissionRepository submissions, QuestionCatalog catalog,
-            DelayedChecks delayedChecks, Clock clock) {
+            ConceptProgresses progresses, Clock clock) {
         this.submissions = submissions;
         this.catalog = catalog;
-        this.delayedChecks = delayedChecks;
+        this.progresses = progresses;
         this.clock = clock;
     }
 
@@ -56,11 +57,14 @@ class SubmissionService {
                 request.confidence(), correct, delayedCheck, today, now));
 
         if (delayedCheck) {
-            delayedChecks.complete(userId, question.conceptId(), today, question.versionId(), correct, now)
+            ConceptProgresses.Scheduled scheduled = progresses.lockDue(userId, question.conceptId(), today)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                             "이 개념은 오늘 지연 확인이 예정되어 있지 않다"));
+            ReviewSchedule.Next next =
+                    ReviewSchedule.afterCheck(scheduled.stage(), correct, request.confidence(), today);
+            progresses.recordCheck(userId, question.conceptId(), scheduled, next, correct, question.versionId(), now);
         } else {
-            delayedChecks.scheduleIfFirst(userId, question.conceptId(), today);
+            progresses.recordLessonAnswer(userId, question.conceptId(), correct, today, now);
         }
 
         return toResult(submission, question);
