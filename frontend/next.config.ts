@@ -5,6 +5,8 @@ const apiOrigin = process.env.RETRIEVO_API_ORIGIN ?? "http://localhost:8080";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // "나" 화면의 버전. pnpm 스크립트로 실행하면 package.json의 version이 들어온다
+  env: { NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version ?? "" },
   partialPrefetching: true,
   turbopack: {
     rules: {

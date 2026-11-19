@@ -125,7 +125,9 @@ export function TodayScreen() {
 
       <BottomNav active="오늘" />
 
-      {showFirstRun && <FirstRunSheet onClose={closeFirstRun} />}
+      {showFirstRun && (
+        <FirstRunSheet title={sheetOpen ? "숫자와 막대의 뜻" : undefined} onClose={closeFirstRun} />
+      )}
     </main>
   );
 }

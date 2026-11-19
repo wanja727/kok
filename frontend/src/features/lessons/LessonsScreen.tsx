@@ -107,7 +107,7 @@ export function LessonsScreen() {
       <div className="mt-auto" />
       <BottomNav active="레슨" />
 
-      {helpOpen && <FirstRunSheet onClose={() => setHelpOpen(false)} />}
+      {helpOpen && <FirstRunSheet title="숫자와 막대의 뜻" onClose={() => setHelpOpen(false)} />}
     </main>
   );
 }
