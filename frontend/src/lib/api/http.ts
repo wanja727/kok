@@ -4,6 +4,7 @@ import {
   type LessonDetail,
   type LessonSummary,
   type QuestionView,
+  type Report,
   type RetrievoApi,
   type SubmissionResult,
   type SubmitRequest,
@@ -43,6 +44,7 @@ export const httpApi: RetrievoApi = {
   lesson: (lessonId: number) => request<LessonDetail>(`/api/lessons/${lessonId}`),
   lessonQuestions: (lessonId: number) => request<QuestionView[]>(`/api/lessons/${lessonId}/questions`),
   concepts: () => request<ConceptStatus[]>("/api/me/concepts"),
+  report: () => request<Report>("/api/me/report"),
   submit: (body: SubmitRequest) =>
     request<SubmissionResult>("/api/submissions", { method: "POST", body: JSON.stringify(body) }),
 };

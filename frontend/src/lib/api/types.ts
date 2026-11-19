@@ -3,6 +3,7 @@
  * - QuestionView: content/QuestionView.java
  * - TodayCheck, ConceptStatus: learning/DelayedCheckController
  * - LessonSummary, LessonDetail: content/LessonQueryService
+ * - Report: learning/ReportController.Report
  * - LessonSteps: content/file/LessonSteps (콘텐츠 파일의 steps를 그대로 준다)
  * - SubmitRequest / SubmissionResult: learning/SubmitRequest.java, learning/SubmissionResult.java
  */
@@ -100,6 +101,29 @@ export interface ExplainStep {
   recall: { prompt: string; answer: string } | null;
 }
 
+/** 맞힌 수와 전체 수. 비율은 화면이 계산한다 (표본이 적은지 함께 보여주려고) */
+export interface Rate {
+  correct: number;
+  total: number;
+}
+
+/** 기록 화면. 모두 실제 풀이·확인 기록에서 센 값이다 */
+export interface Report {
+  today: string;
+  /** 배운 날(레슨에서 낸 답)과 3·7·21일 재확인의 정답률 */
+  curve: { learnedDay: Rate; day3: Rate; day7: Rate; day21: Rate };
+  /** 개념의 단계별 수 */
+  stages: { learning: number; passed1: number; passed2: number; passed3: number; graduated: number };
+  /** 지금까지 낸 답 수 */
+  retrievals: number;
+  /** 확실 → 애매 → 모름 순서 */
+  confidence: ({ confidence: Confidence } & Rate)[];
+  /** 지난 확인에서 확실했는데 틀린 개념 수 */
+  sureWrong: number;
+  /** 최근 26주 동안 답을 낸 날과 그날 낸 답 수. 답이 없는 날은 빠진다 */
+  activity: { date: string; count: number }[];
+}
+
 export interface SubmitRequest {
   /** 화면이 문제마다 만드는 UUID. 같은 값으로 다시 보내면 처음 결과를 돌려받는다 */
   clientSubmissionId: string;
@@ -130,6 +154,7 @@ export interface RetrievoApi {
   lessonQuestions(lessonId: number): Promise<QuestionView[]>;
   /** 풀어 본 개념의 진행 상태 */
   concepts(): Promise<ConceptStatus[]>;
+  report(): Promise<Report>;
   submit(request: SubmitRequest): Promise<SubmissionResult>;
 }
 

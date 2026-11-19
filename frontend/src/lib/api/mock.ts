@@ -242,6 +242,33 @@ export const mockApi: RetrievoApi = {
       }),
     ),
 
+  report: () => {
+    // 예시 기록. 실제 값은 백엔드가 풀이·확인 기록에서 센다
+    const activity: { date: string; count: number }[] = [];
+    for (let i = 0; i < 26 * 7; i++) {
+      const pattern = (i * 7 + 3) % 11;
+      if (i < 40 ? pattern < 7 : pattern < 4) activity.push({ date: daysFromToday(-i), count: 1 + ((i * 5) % 12) });
+    }
+    return delay({
+      today: daysFromToday(0),
+      curve: {
+        learnedDay: { correct: 118, total: 137 },
+        day3: { correct: 31, total: 43 },
+        day7: { correct: 22, total: 36 },
+        day21: { correct: 13, total: 24 },
+      },
+      stages: { learning: 2, passed1: 12, passed2: 11, passed3: 8, graduated: 23 },
+      retrievals: 1284,
+      confidence: [
+        { confidence: "SURE" as const, correct: 410, total: 500 },
+        { confidence: "UNSURE" as const, correct: 270, total: 500 },
+        { confidence: "UNKNOWN" as const, correct: 60, total: 284 },
+      ],
+      sureWrong: 1,
+      activity: activity.reverse(),
+    });
+  },
+
   submit: async (request) => {
     const existing = submitted.get(request.clientSubmissionId);
     if (existing) return delay(existing);
