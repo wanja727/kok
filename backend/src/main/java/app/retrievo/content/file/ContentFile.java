@@ -10,7 +10,8 @@ public record ContentFile(
         SubjectDef subject,
         LessonDef lesson,
         List<ConceptDef> concepts,
-        List<QuestionDef> questions) {
+        List<QuestionDef> questions,
+        LessonSteps steps) {
 
     public record SubjectDef(String key, String name) {
     }

@@ -49,6 +49,24 @@ class ContentSetValidatorTest {
     }
 
     @Test
+    void 레슨_본문이_있으면_일곱_단계를_모두_검사한다() throws IOException {
+        String withSteps = fixture() + steps();
+        assertThat(ContentSetValidator.validate(Map.of("ok.yaml", withSteps)).hasErrors()).isFalse();
+
+        String broken = withSteps
+                .replace("      prompt: 왜 그대로일까요?\n", "")
+                .replaceAll("(?s)  interview:.*", "")
+                .replace("    answer: 2\n  background:", "    answer: 5\n  background:");
+        ContentSetValidator.FileResult result = ContentSetValidator.validate(Map.of("broken.yaml", broken))
+                .files().get(0);
+
+        assertThat(result.errors()).contains(
+                "steps.predict: answer는 보기 번호(1~2)다. 지금 값: 5",
+                "steps.pitfall.recall.prompt가 비어 있다",
+                "steps.interview가 없다");
+    }
+
+    @Test
     void 같은_레슨이_두_파일에_있으면_오류다() throws IOException {
         Map<String, String> sources = new LinkedHashMap<>();
         sources.put("a.yaml", fixture());
@@ -112,5 +130,9 @@ class ContentSetValidatorTest {
 
     private static String fixture() throws IOException {
         return new ClassPathResource("content/n-plus-1.yaml").getContentAsString(StandardCharsets.UTF_8);
+    }
+
+    private static String steps() throws IOException {
+        return new ClassPathResource("content/n-plus-1-steps.yaml").getContentAsString(StandardCharsets.UTF_8);
     }
 }

@@ -1,6 +1,7 @@
 package app.retrievo.content;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -33,6 +34,38 @@ public class LessonQueryService {
 
     /** key: 주제를 뺀 레슨 키. dev-lessons의 레슨 slug와 같다 (예: jpa-n-plus-1) */
     public record LessonSummary(long id, String key, String unit, String title, int questionCount) {
+    }
+
+    /** 레슨 하나와 본문 7단계. 본문이 아직 없으면 steps가 null이다 (화면이 레슨 사이트로 연결한다) */
+    public record LessonDetail(long id, String key, String unit, String title, int questionCount, JsonNode steps) {
+    }
+
+    public LessonDetail detail(long lessonId) {
+        return jdbc.sql("""
+                        select l.id, l.external_key, u.title as unit, l.title, l.body,
+                               (select count(*) from question q
+                                where q.lesson_id = l.id and q.status = 'REVIEWED' and q.purpose = 'JUDGMENT')
+                                   as question_count
+                        from lesson l join unit u on u.id = l.unit_id
+                        where l.id = ?
+                        """)
+                .param(lessonId)
+                .query((rs, n) -> new LessonDetail(
+                        rs.getLong("id"), lessonSlug(rs.getString("external_key")), rs.getString("unit"),
+                        rs.getString("title"), rs.getInt("question_count"), readBody(rs.getString("body"))))
+                .optional()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "없는 레슨이다"));
+    }
+
+    private JsonNode readBody(String body) {
+        if (body == null) {
+            return null;
+        }
+        try {
+            return json.readTree(body);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException("레슨 본문 JSON을 읽을 수 없다", e);
+        }
     }
 
     public List<LessonSummary> list() {

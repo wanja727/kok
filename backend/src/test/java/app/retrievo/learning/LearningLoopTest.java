@@ -69,6 +69,22 @@ class LearningLoopTest extends IntegrationTest {
     }
 
     @Test
+    void 레슨_본문이_없으면_steps는_null이고_있으면_일곱_단계를_준다() throws Exception {
+        JsonNode before = getJson("/api/lessons/" + lessonId);
+        assertThat(before.get("key").asText()).isEqualTo("n-plus-1");
+        assertThat(before.get("steps").isNull()).isTrue();
+
+        String withSteps = new ClassPathResource("content/n-plus-1.yaml").getContentAsString(StandardCharsets.UTF_8)
+                + new ClassPathResource("content/n-plus-1-steps.yaml").getContentAsString(StandardCharsets.UTF_8);
+        importer.importYaml("n-plus-1.yaml", withSteps);
+
+        JsonNode steps = getJson("/api/lessons/" + lessonId).get("steps");
+        assertThat(steps.get("predict").get("answer").asInt()).isEqualTo(2);
+        assertThat(steps.get("practice").get("runs")).hasSize(1);
+        assertThat(steps.get("interview").get("points")).hasSize(2);
+    }
+
+    @Test
     void 레슨_문제에는_정답과_해설이_없다() throws Exception {
         JsonNode questions = getJson("/api/lessons/" + lessonId + "/questions");
 

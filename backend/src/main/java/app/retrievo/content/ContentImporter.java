@@ -6,6 +6,7 @@ import app.retrievo.content.file.ContentFile.QuestionDef;
 import app.retrievo.content.file.ContentFileParser;
 import app.retrievo.content.file.ContentValidationException;
 import app.retrievo.content.file.ContentValidator;
+import app.retrievo.content.file.LessonSteps;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.security.MessageDigest;
@@ -74,7 +75,7 @@ public class ContentImporter {
         Lesson lesson = lessons.findByExternalKey(lessonKey)
                 .orElseGet(() -> lessons.save(
                         new Lesson(lessonKey, unit.getId(), file.lesson().title(), lessonOrder)));
-        lesson.update(unit.getId(), file.lesson().title(), lessonOrder);
+        lesson.update(unit.getId(), file.lesson().title(), lessonOrder, toJson(file.steps()));
 
         Map<String, Concept> conceptByKey = new HashMap<>();
         for (ConceptDef def : file.concepts()) {
@@ -151,6 +152,18 @@ public class ContentImporter {
                 type == QuestionType.DESCRIPTIVE ? List.copyOf(def.checklist()) : null,
                 def.source(),
                 def.difficulty());
+    }
+
+    /** 레슨 본문을 DB에 넣을 JSON으로. 본문이 없는 레슨은 null (화면이 레슨 사이트로 연결한다) */
+    static String toJson(LessonSteps steps) {
+        if (steps == null) {
+            return null;
+        }
+        try {
+            return JSON.writeValueAsString(steps);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     static String hash(QuestionContent content) {

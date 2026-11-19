@@ -1,5 +1,6 @@
 import { isCorrect } from "../grading";
 import { serviceDate } from "../schedule";
+import { nPlusOneSteps } from "./mockLessonBody";
 import type {
   ConceptStatus,
   LessonSummary,
@@ -207,6 +208,13 @@ export const mockApi: RetrievoApi = {
   },
 
   lessons: () => delay(lessons),
+
+  lesson: async (lessonId) => {
+    const lesson = lessons.find((l) => l.id === lessonId);
+    if (!lesson) throw new Error("없는 레슨이다");
+    // 본문은 N+1 레슨에만 있다. 나머지는 레슨 사이트로 연결된다
+    return delay({ ...lesson, steps: lesson.key === "jpa-n-plus-1" ? nPlusOneSteps : null });
+  },
 
   lessonQuestions: async (lessonId) => {
     if (!lessons.some((l) => l.id === lessonId)) throw new Error("없는 레슨이다");

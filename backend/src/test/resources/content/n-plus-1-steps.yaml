@@ -1,0 +1,46 @@
+# 테스트용 레슨 본문. n-plus-1.yaml 뒤에 이어 붙여 쓴다
+steps:
+  predict:
+    question: SQL은 몇 번 나갈까요?
+    code: |-
+      teamRepository.findAll().forEach(t -> t.getMembers().size());
+    choices: [1번, 11번]
+    answer: 2
+  background:
+    title: 지연 로딩
+    text: |-
+      멤버는 **처음 열 때** 가져와요.
+
+      `size()`도 상자를 여는 일이에요.
+    quiz:
+      question: LAZY 컬렉션은 언제 SQL을 보낼까요?
+      choices: [조회할 때, 처음 열 때]
+      answer: 2
+  practice:
+    title: 세어 보기
+    text: 결과를 먼저 예상해요.
+    runs:
+      - call: LAZY · 멤버에 접근
+        choices: [1번, 11번]
+        answer: 2
+        output: 11번
+  pitfall:
+    title: EAGER의 함정
+    text: 시점만 앞당겨요.
+    flow: [팀 조회, 팀마다 멤버 조회]
+    recall:
+      prompt: 왜 그대로일까요?
+      answer: 연관 로딩은 따로 일어나서요.
+  fix:
+    title: fetch join
+    text: 한 번에 가져와요.
+    alternatives:
+      - {title: 배치 페치, note: IN 절로 묶어요}
+    recall:
+      prompt: 왜 1번으로 줄까요?
+      answer: join 한 번으로 함께 가져와서요.
+  interview:
+    question: N+1을 설명해 주세요.
+    points:
+      - {label: 정의, text: 목록 1번 뒤에 N번 더}
+      - {label: 해결, text: fetch join}

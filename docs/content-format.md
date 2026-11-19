@@ -65,6 +65,76 @@ questions:
 - 용도는 형태에서 정해진다. 따로 적지 않는다
 - 지연 확인(3일·7일·21일 뒤)은 **판정 문제로만** 한다. 처음 푼 문제와 다른 문제를 내야 하므로 개념마다 검수 완료된 판정 문제가 2개 이상 있어야 한다. 모자라면 가져올 때 경고한다
 
+## 레슨 본문 (`steps`, 선택)
+
+레슨 본문 7단계를 같은 파일의 `steps`에 쓰면 앱이 한 단계씩 넘기며 보여준다. 없으면 앱은 레슨 사이트(dev-lessons의 대화형 페이지)로 연결한다. 순서는 레슨 표준과 같다: 예측 → 배경 → 실습 → 함정 → 해결 → 확인 → 면접 답변. **확인** 단계는 이 파일의 판정 문제를 그대로 풀어서 따로 적지 않는다.
+
+단계마다 다음 단계로 넘어가기 전에 스스로 꺼내 보는 장치가 하나 있다.
+
+| 단계 | 항목 | 다음 단계를 여는 장치 |
+| --- | --- | --- |
+| `predict` 예측 | `question`, `text`(선택), `code`(선택), `choices`, `answer` | 결과를 고른다. 함정 단계에서 내 예측과 실제를 나란히 보여준다 |
+| `background` 배경 | 설명 항목(아래) | `quiz` 또는 `recall` |
+| `practice` 실습 | `title`, `text`, `code`(선택), `runs`, `after`(선택) | 실행마다 결과를 먼저 고르면 실제 결과(`output`)가 열린다 |
+| `pitfall` 함정 | 설명 항목 | `quiz` 또는 `recall` |
+| `fix` 해결 | 설명 항목 | `quiz` 또는 `recall` |
+| `interview` 면접 답변 | `question`, `points`(2개 이상, `label`·`text`) | 먼저 말하거나 적은 뒤 모범 답변의 뼈대와 비교해 말한 항목만 체크한다 |
+
+- **설명 항목:** `title`, `text`, `code`·`codeNote`(선택), `flow`(선택, 번호 붙은 단계 목록. 도식 대신), `alternatives`(선택, `title`·`note`. 다른 방법과 주의할 점), 그리고 `quiz`(`question`·`choices`·`answer`)와 `recall`(`prompt`·`answer`: 보지 않고 한 문장으로 답한 뒤 보여줄 예시 답) 중 **하나만**
+- **실습 `runs`:** `call`(무엇을 실행했는지), `note`(선택), `choices`·`answer`(결과 예상 보기), `output`(실제 결과). 숫자는 검증 테스트로 확인한 값만 쓴다
+- **글:** `text`는 빈 줄로 문단을 나누고 `**굵게**`와 `` `코드` ``만 쓴다. HTML은 해석하지 않는다
+- 본문 속 정답(`predict`, `quiz`, `runs`)은 판정에 쓰지 않는 연습이라 화면에 함께 보낸다. 지연 확인과 배운 날 기준은 판정 문제로만 정한다
+- 대화형 위젯(시뮬레이터, SVG 도식)은 옮기지 않는다. 코드 블록, `flow`, 실습 결과로 바꿔 쓴다
+- 검사: 일곱 단계(확인 제외 여섯 항목)가 모두 있어야 하고, 보기 번호가 범위 안이어야 하며, `quiz`와 `recall`은 하나만 둔다
+
+```yaml
+steps:
+  predict:
+    question: 이 코드가 실행되는 동안 DB에 SQL을 몇 번 보낼까요?
+    code: |-
+      teamRepository.findAll().forEach(t -> t.getMembers().size());
+    choices: [1번, 2번, 11번]
+    answer: 3
+  background:
+    title: 필요할 때 채우는 빈 상자
+    text: |-
+      **지연 로딩(LAZY)**은 멤버 자리에 빈 상자만 넣어 둬요.
+
+      상자를 처음 열 때(`size()`) SQL을 보내요.
+    quiz:
+      question: LAZY 컬렉션은 언제 SQL을 보낼까요?
+      choices: [조회할 때, 처음 열 때]
+      answer: 2
+  practice:
+    title: 쿼리를 직접 세어 봐요
+    text: 결과를 먼저 예상해요.
+    runs:
+      - call: LAZY · 멤버에 접근
+        choices: [1번, 11번]
+        answer: 2
+        output: 11번 · 팀 목록 1번 + 팀마다 1번씩
+  pitfall:
+    title: EAGER는 시점을 앞당길 뿐이에요
+    text: JPQL은 적힌 대로 번역되고 연관 로딩은 따로 일어나요.
+    flow: [팀만 조회 (1번), 팀마다 멤버 조회 (10번)]
+    recall:
+      prompt: EAGER로 바꿔도 N+1이 그대로인 이유를 한 문장으로 말해 보세요.
+      answer: JPQL이 팀만 조회하고, 연관은 그 뒤에 팀마다 따로 채우기 때문이에요.
+  fix:
+    title: 한꺼번에 가져와요
+    text: fetch join으로 팀과 멤버를 한 번에 가져와요.
+    alternatives:
+      - {title: 배치 페치, note: IN 절로 묶어 가져와요. 페이징과 함께 쓸 수 있어요}
+    recall:
+      prompt: fetch join으로 쿼리가 1번이 되는 이유는?
+      answer: join한 SQL 한 번으로 함께 가져오기 때문이에요.
+  interview:
+    question: JPA N+1 문제에 대해 설명해 주세요.
+    points:
+      - {label: 정의, text: 목록 1번 뒤에 N번이 더 나간다}
+      - {label: 해결, text: fetch join, @EntityGraph, 배치 페치}
+```
+
 ## 형식 검사 (콘텐츠 저장소 CI)
 
 검사 규칙은 이 저장소에 하나만 둔다. 콘텐츠 저장소의 CI는 이 저장소를 내려받아 검사기를 실행한다. 스프링과 DB 없이 돈다.

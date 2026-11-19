@@ -21,6 +21,11 @@ public class LessonController {
         return lessons.list();
     }
 
+    @GetMapping("/{lessonId}")
+    public LessonQueryService.LessonDetail detail(@PathVariable long lessonId) {
+        return lessons.detail(lessonId);
+    }
+
     @GetMapping("/{lessonId}/questions")
     public List<QuestionView> questions(@PathVariable long lessonId) {
         return lessons.questions(lessonId);

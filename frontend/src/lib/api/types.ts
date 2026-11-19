@@ -2,7 +2,8 @@
  * 백엔드 API 응답·요청 형식. backend의 record와 같게 둔다.
  * - QuestionView: content/QuestionView.java
  * - TodayCheck, ConceptStatus: learning/DelayedCheckController
- * - LessonSummary: content/LessonQueryService.LessonSummary
+ * - LessonSummary, LessonDetail: content/LessonQueryService
+ * - LessonSteps: content/file/LessonSteps (콘텐츠 파일의 steps를 그대로 준다)
  * - SubmitRequest / SubmissionResult: learning/SubmitRequest.java, learning/SubmissionResult.java
  */
 
@@ -60,6 +61,45 @@ export interface LessonSummary {
   questionCount: number;
 }
 
+/** 레슨 하나. steps가 null이면 본문이 아직 앱에 없다 (레슨 사이트로 연결한다) */
+export interface LessonDetail extends LessonSummary {
+  steps: LessonSteps | null;
+}
+
+/**
+ * 레슨 본문 7단계: 예측 → 배경 → 실습 → 함정 → 해결 → 확인 → 면접 답변.
+ * 확인 단계는 레슨의 판정 문제를 푼다. text는 빈 줄로 문단, **굵게**, `코드`만 쓴다.
+ * 여기 정답은 본문 안의 연습이라 판정에 쓰지 않는다.
+ */
+export interface LessonSteps {
+  predict: { question: string; text: string | null; code: string | null; choices: string[]; answer: number };
+  background: ExplainStep;
+  practice: {
+    title: string;
+    text: string;
+    code: string | null;
+    runs: { call: string; note: string | null; choices: string[]; answer: number; output: string }[];
+    after: string | null;
+  };
+  pitfall: ExplainStep;
+  fix: ExplainStep;
+  interview: { question: string; points: { label: string; text: string }[] };
+}
+
+export interface ExplainStep {
+  title: string;
+  text: string;
+  code: string | null;
+  codeNote: string | null;
+  /** 번호 붙은 단계 목록 (도식 대신) */
+  flow: string[] | null;
+  /** 다른 방법과 주의할 점 */
+  alternatives: { title: string; note: string }[] | null;
+  /** 다음 단계를 여는 장치. 둘 중 하나만 있다 */
+  quiz: { question: string; choices: string[]; answer: number } | null;
+  recall: { prompt: string; answer: string } | null;
+}
+
 export interface SubmitRequest {
   /** 화면이 문제마다 만드는 UUID. 같은 값으로 다시 보내면 처음 결과를 돌려받는다 */
   clientSubmissionId: string;
@@ -85,6 +125,7 @@ export interface SubmissionResult {
 export interface RetrievoApi {
   todayChecks(): Promise<TodayCheck[]>;
   lessons(): Promise<LessonSummary[]>;
+  lesson(lessonId: number): Promise<LessonDetail>;
   /** 레슨의 판정 문제. 정답과 해설은 담지 않는다 */
   lessonQuestions(lessonId: number): Promise<QuestionView[]>;
   /** 풀어 본 개념의 진행 상태 */
