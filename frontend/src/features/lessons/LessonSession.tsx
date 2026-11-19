@@ -7,27 +7,26 @@ import { ArrowRightIcon, CloseIcon } from "@/components/ui/icons";
 import { LoadError } from "@/components/ui/LoadError";
 import { SessionTopBar } from "@/components/ui/SessionTopBar";
 import { api, type SubmissionResult } from "@/lib/api";
-import { lessonPageUrl, lessonProgress, nextCheckLabel, type LessonProgress } from "@/lib/lessonProgress";
+import { isDueToday, lessonPageUrl, lessonProgress, nextCheckLabel, type LessonProgress } from "@/lib/lessonProgress";
 import { serviceDate } from "@/lib/schedule";
 import { useRemote } from "@/lib/useRemote";
 import { QuestionFlow } from "../solve/QuestionFlow";
+import { LessonBody } from "./body/LessonBody";
 
-type Phase = "intro" | "solve" | "done";
+type Phase = "intro" | "body" | "solve" | "done";
 
 /**
- * 레슨 하나: 소개 → 문제 풀기(답 먼저 → 보기와 확신도 → 해설) → 결과.
- * 같은 날 3번 맞힌 개념은 배운 날 기준을 통과해 3일 뒤 다른 문제로 다시 묻는다 (ADR-017).
- * 레슨 본문 7단계는 아직 dev-lessons 사이트에 있어서 그 페이지로 연결한다.
+ * 레슨 하나. 같은 날 3번 맞힌 개념은 배운 날 기준을 통과해 3일 뒤 다른 문제로 다시 묻는다 (ADR-017).
+ * - 본문이 있는 레슨: 본문 7단계(예측 → … → 확인(문제 풀기) → 면접 답변) → 결과
+ * - 본문이 아직 없는 레슨: 소개(본문은 레슨 사이트 링크) → 문제 풀기 → 결과
  */
 export function LessonSession({ lessonId }: { lessonId: number }) {
   const fetchLesson = useCallback(async () => {
-    const [lessons, questions] = await Promise.all([api.lessons(), api.lessonQuestions(lessonId)]);
-    const lesson = lessons.find((l) => l.id === lessonId);
-    if (!lesson) throw new Error("없는 레슨이에요");
+    const [lesson, questions] = await Promise.all([api.lesson(lessonId), api.lessonQuestions(lessonId)]);
     return { lesson, questions };
   }, [lessonId]);
   const [load, retry] = useRemote(fetchLesson);
-  const [phase, setPhase] = useState<Phase>("intro");
+  const [phaseState, setPhase] = useState<Phase | null>(null);
   const [round, setRound] = useState(0);
   const [index, setIndex] = useState(0);
   const [results, setResults] = useState<SubmissionResult[]>([]);
@@ -40,6 +39,7 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
   }
 
   const { lesson, questions } = load.data;
+  const phase: Phase = phaseState ?? (lesson.steps ? "body" : "intro");
 
   const start = () => {
     setRound((r) => r + 1);
@@ -48,6 +48,22 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
     setPhase("solve");
     window.scrollTo(0, 0);
   };
+
+  if (phase === "body" && lesson.steps) {
+    return (
+      <LessonBody
+        key={round}
+        lesson={lesson}
+        steps={lesson.steps}
+        questions={questions}
+        onFinish={(answered) => {
+          setResults(answered);
+          setPhase("done");
+          window.scrollTo(0, 0);
+        }}
+      />
+    );
+  }
 
   if (phase === "intro") {
     return (
@@ -191,10 +207,14 @@ function NextStep({ progress: p }: { progress: LessonProgress }) {
   if (p.state === "new" || p.passed === 0) {
     return <>아직 배우는 중이에요. 같은 날 3번 맞히면 3일 뒤에 다른 문제로 다시 물어요.</>;
   }
+  const today = serviceDate();
+  if (isDueToday(p, today)) {
+    return <>오늘 확인할 차례예요. 오늘 탭에서 다른 문제로 다시 물어요. 레슨에서 다시 풀어도 일정은 바뀌지 않아요.</>;
+  }
   return (
     <>
-      <b className="font-semibold text-ink">{nextCheckLabel(p, serviceDate())}</b>. 그날 다른 문제로 다시 물어요. 레슨에서
-      다시 풀어도 일정은 바뀌지 않아요.
+      <b className="font-semibold text-ink">{nextCheckLabel(p, today)}</b>. 그날 다른 문제로 다시 물어요. 레슨에서 다시
+      풀어도 일정은 바뀌지 않아요.
     </>
   );
 }

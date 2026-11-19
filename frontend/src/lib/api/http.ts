@@ -1,6 +1,7 @@
 import {
   ApiError,
   type ConceptStatus,
+  type LessonDetail,
   type LessonSummary,
   type QuestionView,
   type RetrievoApi,
@@ -39,6 +40,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const httpApi: RetrievoApi = {
   todayChecks: () => request<TodayCheck[]>("/api/me/delayed-checks/today"),
   lessons: () => request<LessonSummary[]>("/api/lessons"),
+  lesson: (lessonId: number) => request<LessonDetail>(`/api/lessons/${lessonId}`),
   lessonQuestions: (lessonId: number) => request<QuestionView[]>(`/api/lessons/${lessonId}/questions`),
   concepts: () => request<ConceptStatus[]>("/api/me/concepts"),
   submit: (body: SubmitRequest) =>

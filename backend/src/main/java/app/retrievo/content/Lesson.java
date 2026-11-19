@@ -5,6 +5,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "lesson")
@@ -22,6 +24,10 @@ public class Lesson {
 
     private int sortOrder;
 
+    /** 본문 7단계 JSON (LessonSteps). 본문이 아직 없으면 null */
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String body;
+
     protected Lesson() {
     }
 
@@ -32,10 +38,11 @@ public class Lesson {
         this.sortOrder = sortOrder;
     }
 
-    public void update(Long unitId, String title, int sortOrder) {
+    public void update(Long unitId, String title, int sortOrder, String body) {
         this.unitId = unitId;
         this.title = title;
         this.sortOrder = sortOrder;
+        this.body = body;
     }
 
     public Long getId() {
@@ -56,5 +63,9 @@ public class Lesson {
 
     public int getSortOrder() {
         return sortOrder;
+    }
+
+    public String getBody() {
+        return body;
     }
 }

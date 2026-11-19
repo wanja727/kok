@@ -119,6 +119,10 @@ public final class ContentValidator {
             }
         });
 
+        if (file.steps() != null) {
+            LessonStepsValidator.validate(file.steps(), errors);
+        }
+
         return new Result(errors, warnings);
     }
 
