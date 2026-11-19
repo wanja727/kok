@@ -255,6 +255,43 @@ class LearningLoopTest extends IntegrationTest {
     }
 
     @Test
+    void 기록은_실제_풀이와_확인에서_센_값만_준다() throws Exception {
+        // 배운 날: 맞힘 3 + 틀림 1 (확실했는데 틀림)
+        learn("lazy-loop-count", "4");
+        submit(version("fetch-join-predict"), "2", "SURE", null).andExpect(status().isOk());
+        // 3일 확인 맞힘, 7일 확인 틀림(애매)
+        clock.advance(Duration.ofDays(3));
+        checkToday("lazy-loop", true, "SURE");
+        clock.advance(Duration.ofDays(4));
+        checkToday("lazy-loop", false, "UNSURE");
+
+        JsonNode report = getJson("/api/me/report");
+
+        assertThat(report.get("today").asText()).isEqualTo(DAY0.plusDays(7).toString());
+        assertThat(report.get("retrievals").asInt()).isEqualTo(6);
+        JsonNode curve = report.get("curve");
+        assertThat(curve.get("learnedDay").get("correct").asInt()).isEqualTo(3);
+        assertThat(curve.get("learnedDay").get("total").asInt()).isEqualTo(4);
+        assertThat(curve.get("day3").get("correct").asInt()).isEqualTo(1);
+        assertThat(curve.get("day7").get("correct").asInt()).isZero();
+        assertThat(curve.get("day7").get("total").asInt()).isEqualTo(1);
+        assertThat(curve.get("day21").get("total").asInt()).isZero();
+        // lazy-loop는 7일 확인에서 틀려 1단계로, fetch-join은 배우는 중
+        assertThat(report.get("stages").get("passed1").asInt()).isEqualTo(1);
+        assertThat(report.get("stages").get("learning").asInt()).isEqualTo(1);
+        // 확신도 순서는 확실 → 애매 → 모름이고 답이 없는 확신도도 0으로 온다
+        JsonNode confidence = report.get("confidence");
+        assertThat(confidence.get(0).get("confidence").asText()).isEqualTo("SURE");
+        assertThat(confidence.get(0).get("correct").asInt()).isEqualTo(4);
+        assertThat(confidence.get(0).get("total").asInt()).isEqualTo(5);
+        assertThat(confidence.get(1).get("total").asInt()).isEqualTo(1);
+        assertThat(confidence.get(2).get("total").asInt()).isZero();
+        // 답을 낸 날은 배운 날, 3일 뒤, 7일 뒤
+        assertThat(report.get("activity")).hasSize(3);
+        assertThat(report.get("activity").get(0).get("count").asInt()).isEqualTo(4);
+    }
+
+    @Test
     void 재확인에서_틀리면_한_단계_돌아간다() throws Exception {
         learn("lazy-loop-count", "4");
         clock.advance(Duration.ofDays(3));
