@@ -17,7 +17,12 @@ const nextConfig: NextConfig = {
     },
   },
   async rewrites() {
-    return [{ source: "/api/:path*", destination: `${apiOrigin}/api/:path*` }];
+    // 카카오 로그인도 백엔드가 처리한다. 브라우저에는 이 도메인 하나로 보여서 세션 쿠키가 단순하다
+    return [
+      { source: "/api/:path*", destination: `${apiOrigin}/api/:path*` },
+      { source: "/oauth2/:path*", destination: `${apiOrigin}/oauth2/:path*` },
+      { source: "/login/oauth2/:path*", destination: `${apiOrigin}/login/oauth2/:path*` },
+    ];
   },
 };
 

@@ -33,7 +33,15 @@ AI에게 물으면 답은 바로 나오지만, 쉽게 얻은 답은 쉽게 잊�
 | `GET /api/me/delayed-checks/today` | 오늘 확인할 개념과, 개념마다 처음과 다른 문제 하나. 확실했는데 틀린 개념이 먼저 온다. 답은 `mode: DELAYED_CHECK`로 제출 |
 | `GET /api/me/concepts` | 풀어 본 개념의 진행 상태: 통과한 확인 수(0 = 배우는 중, 4 = 졸업), 다음 확인 날 |
 
-- 1주차 로그인은 임시다. `retrievo.auth.dev-header=true`일 때만 `X-Dev-User-Id` 헤더로 사용자를 정한다 (로컬·테스트). 2주차에 카카오 OAuth와 Redis 세션으로 바꾼다
+| `GET /api/me` | 내 프로필: 닉네임, 가입한 날, 며칠째 |
+| `GET /api/me/report` | 기록 화면: 배운 날·3·7·21일 정답률, 단계 분포, 확신도별 정답률, 최근 26주 꺼낸 날 |
+| `POST /api/logout` | 로그아웃 (204) |
+| `GET /oauth2/authorization/kakao` | 카카오 로그인 시작. 끝나면 `RETRIEVO_PUBLIC_URL/`로 돌아간다 |
+
+- **로그인:** 카카오 OAuth2만 쓴다. 비밀번호를 저장하지 않는다 (ADR-010). 로그인 상태는 세션 쿠키(`SESSION`)이고 세션은 Postgres(Spring Session JDBC)에 둔다. Redis를 따로 두지 않으려고 바꿨다
+- **같은 도메인:** 프론트(Next.js)가 `/api/**`, `/oauth2/**`, `/login/oauth2/**`를 백엔드로 넘긴다. 브라우저에는 프론트 도메인 하나로 보여서 쿠키가 단순하다
+- **CSRF:** 세션 쿠키를 쓰므로 켜 둔다. 서버가 `XSRF-TOKEN` 쿠키를 내려주고, 화면은 GET이 아닌 요청에 그 값을 `X-XSRF-TOKEN` 헤더로 보낸다
+- **개발용 임시 로그인:** `retrievo.auth.dev-header=true`(local·test 프로필)일 때만 `X-Dev-User-Id` 헤더로 사용자를 정한다. 운영에서는 꺼져 있다
 - 문제는 시작할 때 `retrievo.content.import-dir`의 YAML 파일에서 가져온다. 형식: [docs/content-format.md](docs/content-format.md)
 
 ## 실행
@@ -52,3 +60,12 @@ gradle test
 3. `RetrievoApplication`을 실행한다. 활성 프로필 `local`, 프로그램 인수 `--retrievo.content.import-dir=<dev-lessons>/content/questions`
 4. 임시 로그인용 사용자를 넣는다: `docker compose exec postgres psql -U retrievo -d retrievo -c "insert into users (nickname) values ('me') returning id;"`
 5. `curl -H "X-Dev-User-Id: 1" http://localhost:8080/api/lessons`로 확인한다
+
+### 카카오 로그인 설정
+
+1. [카카오 개발자](https://developers.kakao.com)에서 애플리케이션을 만든다
+2. **카카오 로그인**을 켜고, Redirect URI에 `<프론트 주소>/login/oauth2/code/kakao`를 등록한다. 로컬은 `http://localhost:3000/login/oauth2/code/kakao`
+3. **동의항목**에서 "닉네임(profile_nickname)"을 켠다. 받지 못하면 이름은 "학습자"로 만든다
+4. **보안**에서 Client Secret을 만들고 사용 상태로 둔다
+5. 백엔드 환경 변수: `KAKAO_CLIENT_ID`(REST API 키), `KAKAO_CLIENT_SECRET`, `RETRIEVO_PUBLIC_URL`(프론트 주소, 기본 `http://localhost:3000`). 키는 저장소에 넣지 않는다
+6. 프론트는 `NEXT_PUBLIC_API_MODE=http`로 띄우고 `NEXT_PUBLIC_DEV_USER_ID`는 비워 둔다 (값이 있으면 로그인하지 않아도 그 사용자로 들어가서 로그인 화면을 볼 수 없다)

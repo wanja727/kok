@@ -274,6 +274,8 @@ export const mockApi: RetrievoApi = {
       }),
     ),
 
+  logout: () => delay(undefined),
+
   me: () => delay({ id: 1, nickname: "me", joinedOn: daysFromToday(-30), days: 31 }),
 
   report: () => {
