@@ -1,4 +1,4 @@
-# 테스트용 레슨 본문. n-plus-1.yaml 뒤에 이어 붙여 쓴다
+# 테스트용 레슨 본문 조각. n-plus-1.yaml 뒤에 이어 붙여 쓴다 (단독으로는 문제 파일이 아니라서 content/ 밖에 둔다)
 steps:
   predict:
     question: SQL은 몇 번 나갈까요?

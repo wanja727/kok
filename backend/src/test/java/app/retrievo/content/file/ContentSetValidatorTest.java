@@ -133,6 +133,6 @@ class ContentSetValidatorTest {
     }
 
     private static String steps() throws IOException {
-        return new ClassPathResource("content/n-plus-1-steps.yaml").getContentAsString(StandardCharsets.UTF_8);
+        return new ClassPathResource("content-fragments/n-plus-1-steps.yaml").getContentAsString(StandardCharsets.UTF_8);
     }
 }

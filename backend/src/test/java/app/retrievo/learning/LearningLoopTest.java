@@ -75,7 +75,7 @@ class LearningLoopTest extends IntegrationTest {
         assertThat(before.get("steps").isNull()).isTrue();
 
         String withSteps = new ClassPathResource("content/n-plus-1.yaml").getContentAsString(StandardCharsets.UTF_8)
-                + new ClassPathResource("content/n-plus-1-steps.yaml").getContentAsString(StandardCharsets.UTF_8);
+                + new ClassPathResource("content-fragments/n-plus-1-steps.yaml").getContentAsString(StandardCharsets.UTF_8);
         importer.importYaml("n-plus-1.yaml", withSteps);
 
         JsonNode steps = getJson("/api/lessons/" + lessonId).get("steps");
