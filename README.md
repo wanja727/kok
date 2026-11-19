@@ -69,3 +69,7 @@ gradle test
 4. **보안**에서 Client Secret을 만들고 사용 상태로 둔다
 5. 백엔드 환경 변수: `KAKAO_CLIENT_ID`(REST API 키), `KAKAO_CLIENT_SECRET`, `RETRIEVO_PUBLIC_URL`(프론트 주소, 기본 `http://localhost:3000`). 키는 저장소에 넣지 않는다
 6. 프론트는 `NEXT_PUBLIC_API_MODE=http`로 띄우고 `NEXT_PUBLIC_DEV_USER_ID`는 비워 둔다 (값이 있으면 로그인하지 않아도 그 사용자로 들어가서 로그인 화면을 볼 수 없다)
+
+## 배포
+
+Vercel(프론트) + Cloud Run 서울(백엔드) + Supabase 서울(DB). main에 백엔드 변경이 들어가면 GitHub Actions가 테스트 뒤 배포한다. 처음 설정과 운영 메모는 [docs/deploy.md](docs/deploy.md).

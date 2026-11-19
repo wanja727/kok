@@ -3,8 +3,17 @@ name: Backend
 on:
   push:
     branches: [main]
+    paths: ["backend/**", ".github/workflows/backend.yml"]
   pull_request:
   workflow_dispatch:
+  # 콘텐츠 저장소(dev-lessons)가 바뀌면 다시 배포해서 새 문제를 가져온다
+  repository_dispatch:
+    types: [content-updated]
+
+# 배포는 한 번에 하나씩. 진행 중인 배포를 끊지 않는다
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -30,3 +39,45 @@ jobs:
         with:
           name: test-report
           path: backend/build/reports/tests/test
+
+  # main의 백엔드를 Cloud Run(서울)에 배포한다. 클라우드 설정 전(GCP_PROJECT_ID 변수가 없을 때)에는 건너뛴다
+  # 설정 방법: docs/deploy.md
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.GCP_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      REGION: asia-northeast3
+      SERVICE: retrievo-api
+      IMAGE: asia-northeast3-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/retrievo/retrievo-api:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 문제 파일 내려받기 (dev-lessons)
+        uses: actions/checkout@v4
+        with:
+          repository: wanja727/dev-lessons
+          path: dev-lessons
+      - run: cp -r dev-lessons/content/questions/. backend/content/
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: retrievo-deploy@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker asia-northeast3-docker.pkg.dev --quiet
+      - run: docker build -t "$IMAGE" backend && docker push "$IMAGE"
+      - name: Cloud Run 배포
+        run: |
+          # 요청이 없으면 0대(비용 0), 최대 1대(비용 상한, 시작할 때 문제 가져오기가 겹치지 않게)
+          gcloud run deploy "$SERVICE" \
+            --image "$IMAGE" \
+            --region "$REGION" \
+            --service-account "retrievo-run@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
+            --allow-unauthenticated \
+            --cpu 1 --memory 512Mi --cpu-boost \
+            --min-instances 0 --max-instances 1 \
+            --set-env-vars "RETRIEVO_PUBLIC_URL=${{ vars.RETRIEVO_PUBLIC_URL }},DATABASE_URL=${{ vars.DATABASE_URL }},DATABASE_USERNAME=${{ vars.DATABASE_USERNAME }},KAKAO_CLIENT_ID=${{ vars.KAKAO_CLIENT_ID }}" \
+            --set-secrets "DATABASE_PASSWORD=retrievo-db-password:latest,KAKAO_CLIENT_SECRET=retrievo-kakao-secret:latest" \
+            --quiet

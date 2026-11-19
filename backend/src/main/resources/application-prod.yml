@@ -1,0 +1,35 @@
+# 운영(Cloud Run + Supabase). 값은 배포 워크플로가 환경 변수로 넣는다 (docs/deploy.md)
+spring:
+  datasource:
+    # Supabase 커넥션 풀러(세션 모드, 5432). Cloud Run은 IPv4라 직접 연결(IPv6) 대신 풀러를 쓴다
+    # 예: jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require&currentSchema=retrievo
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      # 인스턴스는 최대 1대. 무료 풀러의 연결 수 안에서 넉넉하다
+      maximum-pool-size: 4
+      minimum-idle: 1
+  flyway:
+    # Supabase는 public 스키마를 Data API(anon 키)로 내보낸다. 앱 테이블은 내보내지 않는 retrievo 스키마에 둔다
+    schemas: retrievo
+    default-schema: retrievo
+  jpa:
+    properties:
+      hibernate:
+        default_schema: retrievo
+
+server:
+  # Cloud Run이 PORT를 준다
+  port: ${PORT:8080}
+  shutdown: graceful
+  servlet:
+    session:
+      cookie:
+        secure: true
+
+retrievo:
+  secure-cookies: true
+  content:
+    # 배포 워크플로가 dev-lessons의 문제 파일을 이미지의 이 경로에 넣는다. 시작할 때 가져온다
+    import-dir: /app/content
