@@ -274,6 +274,8 @@ export const mockApi: RetrievoApi = {
       }),
     ),
 
+  me: () => delay({ id: 1, nickname: "me", joinedOn: daysFromToday(-30), days: 31 }),
+
   report: () => {
     // 예시 기록. 실제 값은 백엔드가 풀이·확인 기록에서 센다
     const activity: { date: string; count: number }[] = [];

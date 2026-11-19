@@ -4,6 +4,7 @@
  * - TodayCheck, ConceptStatus: learning/DelayedCheckController
  * - LessonSummary, LessonDetail: content/LessonQueryService
  * - Report: learning/ReportController.Report
+ * - Me: auth/MeController.Me
  * - LessonSteps: content/file/LessonSteps (콘텐츠 파일의 steps를 그대로 준다)
  * - SubmitRequest / SubmissionResult: learning/SubmitRequest.java, learning/SubmissionResult.java
  */
@@ -110,6 +111,14 @@ export interface ExplainStep {
   recall: { prompt: string; answer: string } | null;
 }
 
+/** "나" 화면의 프로필. joinedOn은 가입한 서비스 날짜, days는 가입한 날을 1일째로 센 오늘 */
+export interface Me {
+  id: number;
+  nickname: string;
+  joinedOn: string;
+  days: number;
+}
+
 /** 맞힌 수와 전체 수. 비율은 화면이 계산한다 (표본이 적은지 함께 보여주려고) */
 export interface Rate {
   correct: number;
@@ -164,6 +173,7 @@ export interface RetrievoApi {
   /** 풀어 본 개념의 진행 상태 */
   concepts(): Promise<ConceptStatus[]>;
   report(): Promise<Report>;
+  me(): Promise<Me>;
   submit(request: SubmitRequest): Promise<SubmissionResult>;
 }
 

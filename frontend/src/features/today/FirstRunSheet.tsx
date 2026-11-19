@@ -3,7 +3,14 @@
 import { PrimaryButton } from "@/components/ui/buttons";
 
 /** 첫 사용 때 한 번만 숫자와 막대의 뜻을 알려준다. 이후에는 물음표 버튼으로만 본다 (ADR-018) */
-export function FirstRunSheet({ onClose }: { onClose: () => void }) {
+export function FirstRunSheet({
+  onClose,
+  title = "처음이라 한 번만 알려 드려요",
+}: {
+  onClose: () => void;
+  /** 물음표나 "나" 화면에서 다시 열 때는 "숫자와 막대의 뜻"처럼 바꿔 쓴다 */
+  title?: string;
+}) {
   return (
     <div className="fixed inset-0 z-20 mx-auto flex max-w-[430px] flex-col justify-end">
       <div className="absolute inset-0 bg-ink/45" onClick={onClose} aria-hidden="true" />
@@ -15,7 +22,7 @@ export function FirstRunSheet({ onClose }: { onClose: () => void }) {
       >
         <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-line-strong" />
         <h2 id="first-run-title" className="text-xl font-semibold tracking-[-0.4px]">
-          처음이라 한 번만 알려 드려요
+          {title}
         </h2>
         <dl className="mt-[18px] flex flex-col gap-4">
           <Row term={<span className="text-[22px] leading-[1.1] font-semibold">3</span>}>

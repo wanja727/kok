@@ -324,6 +324,18 @@ class LearningLoopTest extends IntegrationTest {
     }
 
     @Test
+    void 내_프로필은_닉네임과_가입한_날부터_며칠째인지_준다() throws Exception {
+        jdbc.update("update users set created_at = ? where id = ?",
+                java.sql.Timestamp.from(START.minus(Duration.ofDays(2))), userId);
+
+        JsonNode me = getJson("/api/me");
+
+        assertThat(me.get("nickname").asText()).isEqualTo("tester");
+        assertThat(me.get("joinedOn").asText()).isEqualTo(DAY0.minusDays(2).toString());
+        assertThat(me.get("days").asLong()).isEqualTo(3);
+    }
+
+    @Test
     void 재확인에서_틀리면_한_단계_돌아간다() throws Exception {
         learn("lazy-loop-count", "4");
         clock.advance(Duration.ofDays(3));

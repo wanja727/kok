@@ -2,6 +2,7 @@ import {
   ApiError,
   type ConceptStatus,
   type LessonDetail,
+  type Me,
   type LessonSummary,
   type QuestionView,
   type Report,
@@ -45,6 +46,7 @@ export const httpApi: RetrievoApi = {
   lessonQuestions: (lessonId: number) => request<QuestionView[]>(`/api/lessons/${lessonId}/questions`),
   concepts: () => request<ConceptStatus[]>("/api/me/concepts"),
   report: () => request<Report>("/api/me/report"),
+  me: () => request<Me>("/api/me"),
   submit: (body: SubmitRequest) =>
     request<SubmissionResult>("/api/submissions", { method: "POST", body: JSON.stringify(body) }),
 };
