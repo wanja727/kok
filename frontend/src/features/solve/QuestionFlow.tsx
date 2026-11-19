@@ -1,0 +1,136 @@
+"use client";
+
+import { useState, type ReactNode } from "react";
+import { BottomActions, PrimaryButton } from "@/components/ui/buttons";
+import { api, type Confidence, type QuestionView, type SubmissionMode, type SubmissionResult } from "@/lib/api";
+import { ChooseStep } from "./ChooseStep";
+import { RecallStep, needsRecall } from "./RecallStep";
+import { ResultStep } from "./ResultStep";
+
+type Step = "recall" | "choose" | "result";
+
+/**
+ * 문제 하나를 푸는 흐름: 답 먼저 적기 → 보기와 확신도 → 해설.
+ * 정답과 해설은 제출한 뒤에만 받는다 (답 먼저). 레슨과 지연 확인이 같이 쓴다.
+ * 다음 문제로 넘어갈 때는 key를 바꿔 새로 만든다 (상태를 문제마다 새로 시작).
+ */
+export function QuestionFlow({
+  question,
+  context,
+  mode,
+  topBar,
+  nextLabel,
+  onAnswered,
+  onNext,
+}: {
+  question: QuestionView;
+  context: string;
+  mode: SubmissionMode;
+  topBar: ReactNode;
+  nextLabel: string;
+  onAnswered: (result: SubmissionResult) => void;
+  onNext: () => void;
+}) {
+  const [step, setStepState] = useState<Step>(needsRecall(question) ? "recall" : "choose");
+  /**
+   * 처음 제출할 때 만들고 이 문제 동안 다시 쓴다.
+   * 응답을 못 받아 다시 보내도 서버가 처음 결과를 돌려준다 (재시도·두 번 누르기)
+   */
+  const [clientSubmissionId, setClientSubmissionId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [selected, setSelected] = useState<string | null>(null);
+  const [confidence, setConfidence] = useState<Confidence | null>(null);
+  const [result, setResult] = useState<SubmissionResult | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const setStep = (s: Step) => {
+    setStepState(s);
+    window.scrollTo(0, 0);
+  };
+
+  const submit = async () => {
+    if (!selected || !confidence) return;
+    const id = clientSubmissionId ?? crypto.randomUUID();
+    setClientSubmissionId(id);
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const answered = await api.submit({
+        clientSubmissionId: id,
+        questionVersionId: question.questionVersionId,
+        selected,
+        confidence,
+        mode,
+      });
+      setResult(answered);
+      onAnswered(answered);
+      setStep("result");
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "제출하지 못했어요");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (step === "recall") {
+    return (
+      <main className="app-frame">
+        {topBar}
+        <RecallStep
+          question={question}
+          context={context}
+          draft={draft}
+          onDraft={setDraft}
+          onReveal={() => setStep("choose")}
+          onDontKnow={() => {
+            setConfidence("UNKNOWN");
+            setStep("choose");
+          }}
+        />
+      </main>
+    );
+  }
+
+  if (step === "choose" || !result) {
+    return (
+      <main className="app-frame">
+        {topBar}
+        <ChooseStep
+          question={question}
+          draft={draft}
+          selected={selected}
+          confidence={confidence}
+          onSelect={setSelected}
+          onConfidence={setConfidence}
+        />
+        <BottomActions>
+          {submitError && <p className="pb-2 text-center text-xs text-wrong">{submitError}</p>}
+          <PrimaryButton onClick={submit} disabled={!selected || !confidence || submitting}>
+            {submitting ? "채점하는 중" : "제출"}
+          </PrimaryButton>
+          {(!selected || !confidence) && (
+            <p className="pt-2 text-center text-xs text-soft">답과 확신도를 고르면 제출할 수 있어요</p>
+          )}
+        </BottomActions>
+      </main>
+    );
+  }
+
+  return (
+    <main className="app-frame">
+      {topBar}
+      <ResultStep question={question} result={result} />
+      <BottomActions>
+        <PrimaryButton
+          onClick={() => {
+            window.scrollTo(0, 0);
+            onNext();
+          }}
+        >
+          {nextLabel}
+        </PrimaryButton>
+      </BottomActions>
+    </main>
+  );
+}

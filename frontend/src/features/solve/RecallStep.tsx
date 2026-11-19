@@ -3,7 +3,7 @@
 import { BottomActions, PrimaryButton, TextButton } from "@/components/ui/buttons";
 import { CodeBlock } from "@/components/ui/CodeBlock";
 import { LockIcon, MicIcon } from "@/components/ui/icons";
-import type { QuestionView, TodayCheck } from "@/lib/api";
+import type { QuestionView } from "@/lib/api";
 import { useSpeechInput } from "@/lib/useSpeechInput";
 
 /**
@@ -15,26 +15,28 @@ export function needsRecall(question: QuestionView): boolean {
 }
 
 export function RecallStep({
-  check,
+  question: q,
+  context,
   draft,
   onDraft,
   onReveal,
   onDontKnow,
 }: {
-  check: TodayCheck;
+  question: QuestionView;
+  /** 질문 위에 작게 보이는 맥락. 예: "JPA · N+1 문제 · 처음과 다른 문제" */
+  context: string;
   draft: string;
   onDraft: (draft: string) => void;
   onReveal: () => void;
   onDontKnow: () => void;
 }) {
-  const q = check.question;
   const speech = useSpeechInput((text) => onDraft(draft ? `${draft} ${text}` : text));
   const count = q.choices?.length ?? 0;
 
   return (
     <>
       <div className="px-6 pt-8 text-[13px] text-muted">
-        {check.conceptName} · 처음과 다른 문제
+        {context}
       </div>
       <h1 className="mx-6 mt-2.5 text-2xl leading-[1.42] font-semibold tracking-[-0.6px]">{q.body}</h1>
 

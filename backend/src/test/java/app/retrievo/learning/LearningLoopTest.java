@@ -60,6 +60,15 @@ class LearningLoopTest extends IntegrationTest {
     }
 
     @Test
+    void 레슨_목록은_주제를_뺀_레슨_키와_판정_문제_수를_준다() throws Exception {
+        JsonNode lessons = getJson("/api/lessons");
+
+        assertThat(lessons).hasSize(1);
+        assertThat(lessons.get(0).get("key").asText()).isEqualTo("n-plus-1");
+        assertThat(lessons.get(0).get("questionCount").asInt()).isEqualTo(3);
+    }
+
+    @Test
     void 레슨_문제에는_정답과_해설이_없다() throws Exception {
         JsonNode questions = getJson("/api/lessons/" + lessonId + "/questions");
 

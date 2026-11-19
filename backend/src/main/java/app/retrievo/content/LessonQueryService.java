@@ -31,12 +31,13 @@ public class LessonQueryService {
         this.json = json;
     }
 
-    public record LessonSummary(long id, String unit, String title, int questionCount) {
+    /** key: 주제를 뺀 레슨 키. dev-lessons의 레슨 slug와 같다 (예: jpa-n-plus-1) */
+    public record LessonSummary(long id, String key, String unit, String title, int questionCount) {
     }
 
     public List<LessonSummary> list() {
         return jdbc.sql("""
-                        select l.id, u.title as unit, l.title,
+                        select l.id, l.external_key, u.title as unit, l.title,
                                (select count(*) from question q
                                 where q.lesson_id = l.id and q.status = 'REVIEWED' and q.purpose = 'JUDGMENT')
                                    as question_count
@@ -44,8 +45,13 @@ public class LessonQueryService {
                         order by u.sort_order, l.sort_order, l.id
                         """)
                 .query((rs, n) -> new LessonSummary(
-                        rs.getLong("id"), rs.getString("unit"), rs.getString("title"), rs.getInt("question_count")))
+                        rs.getLong("id"), lessonSlug(rs.getString("external_key")), rs.getString("unit"), rs.getString("title"), rs.getInt("question_count")))
                 .list();
+    }
+
+    /** 가져올 때 레슨 키는 "주제/레슨"이다 (ContentImporter). 화면에는 레슨 부분만 준다 */
+    static String lessonSlug(String externalKey) {
+        return externalKey.substring(externalKey.indexOf('/') + 1);
     }
 
     public List<QuestionView> questions(long lessonId) {
