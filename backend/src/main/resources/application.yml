@@ -45,6 +45,8 @@ server:
 retrievo:
   # 사용자가 보는 프론트 주소. 로그인 뒤 돌아갈 곳과 카카오 redirect URI를 만든다
   public-url: ${RETRIEVO_PUBLIC_URL:http://localhost:3000}
+  # 쿠키에 Secure를 붙인다 (https). 운영(prod)에서 켠다
+  secure-cookies: false
   auth:
     # 개발용 임시 로그인: X-Dev-User-Id 헤더로 사용자를 정한다. 로컬과 테스트에서만 켠다
     dev-header: false

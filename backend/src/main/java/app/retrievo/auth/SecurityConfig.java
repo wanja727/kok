@@ -25,11 +25,15 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, KakaoUserService kakaoUsers,
-            @Value("${retrievo.public-url}") String publicUrl) throws Exception {
+            @Value("${retrievo.public-url}") String publicUrl,
+            @Value("${retrievo.secure-cookies}") boolean secureCookies) throws Exception {
+        CookieCsrfTokenRepository csrfTokens = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        // 운영은 https라 Secure를 붙인다. Cloud Run 앞단 프록시 때문에 요청만 보고는 https인지 알 수 없다
+        csrfTokens.setCookieCustomizer(cookie -> cookie.secure(secureCookies));
         http
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(csrfTokens)
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
                 .oauth2Login(login -> login
                         // 로그인 화면은 프론트에 있다. 스프링 기본 로그인 페이지를 만들지 않는다
