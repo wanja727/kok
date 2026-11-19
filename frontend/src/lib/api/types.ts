@@ -36,6 +36,15 @@ export interface TodayCheck {
   /** 지난 확인에서 확실했는데 틀려서 다음 날 다시 묻는 개념. 목록 맨 앞에 온다 */
   sureWrong: boolean;
   question: QuestionView;
+  /** 마지막(21일) 확인일 때만. 판정 문제를 맞혀 졸업한 뒤 동료에게 가르치듯 말해 볼 질문 (자기 채점, 판정에 쓰지 않음) */
+  teach: TeachPrompt | null;
+}
+
+export interface TeachPrompt {
+  questionVersionId: number;
+  body: string;
+  /** 말했는지 바로 판단할 수 있는 항목 */
+  checklist: string[];
 }
 
 /** 풀어 본 개념의 진행 상태 */

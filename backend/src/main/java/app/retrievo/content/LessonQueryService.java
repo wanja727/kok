@@ -104,6 +104,34 @@ public class LessonQueryService {
                 .list();
     }
 
+    /**
+     * 졸업 확인 때 동료에게 가르치듯 말해 볼 질문과 자기 채점 항목. 개념의 검수 완료된 서술형(연습) 문제에서 고른다.
+     * 판정에는 쓰지 않는다. 졸업은 판정 문제로 정한다 (ADR-007)
+     */
+    public record TeachPrompt(long questionVersionId, String body, List<String> checklist) {
+    }
+
+    public Optional<TeachPrompt> teachPrompt(long conceptId) {
+        return jdbc.sql("""
+                        select qv.id, qv.body, qv.checklist
+                        from question q join question_version qv on qv.id = q.current_version_id
+                        where q.concept_id = ? and q.status = 'REVIEWED' and q.purpose = 'PRACTICE'
+                          and qv.checklist is not null
+                        order by q.sort_order, q.id
+                        limit 1
+                        """)
+                .param(conceptId)
+                .query((rs, n) -> {
+                    try {
+                        return new TeachPrompt(rs.getLong("id"), rs.getString("body"),
+                                json.readValue(rs.getString("checklist"), STRING_LIST));
+                    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                        throw new IllegalStateException("체크리스트 JSON을 읽을 수 없다", e);
+                    }
+                })
+                .optional();
+    }
+
     /** 개념에서 지연 확인에 낼 문제 하나. 사용자가 아직 안 푼 문제를 먼저, 다 풀었으면 가장 오래전에 푼 문제 */
     public Optional<QuestionView> questionForDelayedCheck(long userId, long conceptId) {
         return jdbc.sql("""
