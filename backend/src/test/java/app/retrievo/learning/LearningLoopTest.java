@@ -292,6 +292,38 @@ class LearningLoopTest extends IntegrationTest {
     }
 
     @Test
+    void 마지막_확인에만_가르치듯_말해_볼_서술형_질문을_함께_준다() throws Exception {
+        learn("fetch-join-predict", "1");
+        clock.advance(Duration.ofDays(3));
+        assertThat(getJson("/api/me/delayed-checks/today").get(0).get("teach").isNull()).isTrue();
+        checkToday("fetch-join", true, "SURE");
+        clock.advance(Duration.ofDays(4));
+        checkToday("fetch-join", true, "SURE");
+        clock.advance(Duration.ofDays(14));
+
+        JsonNode last = getJson("/api/me/delayed-checks/today").get(0);
+        assertThat(last.get("attemptNo").asInt()).isEqualTo(3);
+        JsonNode teach = last.get("teach");
+        assertThat(teach.get("body").asText()).isEqualTo("N+1 문제가 무엇이고 어떻게 해결하는지 면접에서 답하듯 설명해 보세요.");
+        assertThat(teach.get("checklist")).hasSize(4);
+        assertThat(teach.get("questionVersionId").asLong()).isEqualTo(version("fetch-join-explain"));
+    }
+
+    @Test
+    void 서술형_문제가_없는_개념은_마지막_확인에도_teach가_없다() throws Exception {
+        learn("lazy-loop-count", "4");
+        clock.advance(Duration.ofDays(3));
+        checkToday("lazy-loop", true, "SURE");
+        clock.advance(Duration.ofDays(4));
+        checkToday("lazy-loop", true, "SURE");
+        clock.advance(Duration.ofDays(14));
+
+        JsonNode last = getJson("/api/me/delayed-checks/today").get(0);
+        assertThat(last.get("attemptNo").asInt()).isEqualTo(3);
+        assertThat(last.get("teach").isNull()).isTrue();
+    }
+
+    @Test
     void 재확인에서_틀리면_한_단계_돌아간다() throws Exception {
         learn("lazy-loop-count", "4");
         clock.advance(Duration.ofDays(3));

@@ -30,9 +30,10 @@ public class DelayedCheckController {
      * attemptNo: 이번 확인 전까지 통과한 확인 수(1~3). 1이면 3일, 2면 7일, 3이면 21일 확인이다.
      * 통과하면 이 수가 하나 늘고, 4가 되면 졸업이다 (ADR-017)
      * sureWrong: 지난 확인에서 확실했는데 틀려서 다음 날 다시 묻는 개념. 목록 맨 앞에 온다
+     * teach: 마지막(21일) 확인일 때만. 판정 문제를 맞혀 졸업한 뒤 동료에게 가르치듯 말해 볼 질문 (자기 채점)
      */
     public record TodayCheck(long conceptId, String conceptName, int attemptNo, LocalDate dueDate,
-            LocalDate learnedOn, boolean sureWrong, QuestionView question) {
+            LocalDate learnedOn, boolean sureWrong, QuestionView question, LessonQueryService.TeachPrompt teach) {
     }
 
     @GetMapping("/api/me/delayed-checks/today")
@@ -64,6 +65,9 @@ public class DelayedCheckController {
     private Optional<TodayCheck> toCheck(long userId, ConceptProgresses.Due due) {
         return lessons.questionForDelayedCheck(userId, due.conceptId())
                 .map(q -> new TodayCheck(due.conceptId(), due.conceptName(), due.stage(), due.dueDate(),
-                        due.learnedOn(), due.sureWrong(), q));
+                        due.learnedOn(), due.sureWrong(), q,
+                        due.stage() == ReviewSchedule.GRADUATED - 1
+                                ? lessons.teachPrompt(due.conceptId()).orElse(null)
+                                : null));
     }
 }

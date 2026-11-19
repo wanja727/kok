@@ -7,6 +7,7 @@ import type {
   QuestionView,
   RetrievoApi,
   SubmissionResult,
+  TeachPrompt,
   TodayCheck,
 } from "./types";
 
@@ -150,9 +151,39 @@ const conceptLesson: Record<number, number> = { 11: 1, 12: 2, 13: 3, 14: 4, 15: 
 const progress: Record<number, { stage: number; learnedDaysAgo: number; dueInDays: number; sureWrong: boolean }> = {
   12: { stage: 1, learnedDaysAgo: 8, dueInDays: 0, sureWrong: true },
   11: { stage: 1, learnedDaysAgo: 3, dueInDays: 0, sureWrong: false },
-  13: { stage: 2, learnedDaysAgo: 7, dueInDays: 0, sureWrong: false },
+  13: { stage: 3, learnedDaysAgo: 21, dueInDays: 0, sureWrong: false },
   14: { stage: 4, learnedDaysAgo: 30, dueInDays: 0, sureWrong: false },
 };
+
+/** 마지막 확인에서 가르치듯 말해 볼 질문. 실제로는 개념의 서술형(연습) 문제에서 고른다 */
+const teachPrompts: Record<number, TeachPrompt> = {
+  13: {
+    questionVersionId: 901,
+    body: "트랜잭션 격리 수준 네 가지와 각각 막는 현상을 설명해 보세요.",
+    checklist: [
+      "네 단계를 말했다",
+      "더티 리드, 반복 불가능 읽기, 팬텀 리드를 구분했다",
+      "MVCC나 스냅샷을 말했다",
+      "높일수록 대기와 재시도가 늘어난다고 말했다",
+    ],
+  },
+};
+
+/** 지연 확인 결과로 단계를 옮긴다 (백엔드 ReviewSchedule과 같은 규칙: 맞히면 +1, 4면 졸업, 틀리면 -1(1 아래로는 안 감)) */
+function recordCheck(conceptId: number, correct: boolean, sure: boolean) {
+  const p = progress[conceptId];
+  if (!p || p.stage < 1 || p.stage > 3) return;
+  const gaps = [0, 4, 14, 0];
+  if (correct) {
+    p.stage += 1;
+    p.dueInDays = gaps[p.stage - 1] ?? 0;
+    p.sureWrong = false;
+  } else {
+    p.stage = Math.max(1, p.stage - 1);
+    p.dueInDays = sure ? 1 : 3;
+    p.sureWrong = sure;
+  }
+}
 
 /** 오늘 레슨에서 맞힌 답 수. 같은 날 3번 맞히면 배운 날 기준을 통과한다 (백엔드와 같은 규칙) */
 const lessonCorrectToday: Record<number, number> = {};
@@ -201,6 +232,7 @@ export const mockApi: RetrievoApi = {
             learnedOn: daysFromToday(-p.learnedDaysAgo),
             sureWrong: p.sureWrong,
             question: view(q),
+            teach: p.stage === 3 ? (teachPrompts[p.conceptId] ?? null) : null,
           },
         ];
       }),
@@ -278,6 +310,7 @@ export const mockApi: RetrievoApi = {
 
     const correct = isCorrect(q.type, request.selected, q.answer);
     if (request.mode === "LESSON") recordLessonAnswer(q.conceptId, correct);
+    else recordCheck(q.conceptId, correct, request.confidence === "SURE");
 
     const result: SubmissionResult = {
       submissionId: nextSubmissionId++,
