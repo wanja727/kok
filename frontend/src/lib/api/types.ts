@@ -174,6 +174,7 @@ export interface RetrievoApi {
   concepts(): Promise<ConceptStatus[]>;
   report(): Promise<Report>;
   me(): Promise<Me>;
+  logout(): Promise<void>;
   submit(request: SubmitRequest): Promise<SubmissionResult>;
 }
 

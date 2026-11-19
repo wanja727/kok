@@ -20,7 +20,8 @@ class SchemaTest extends IntegrationTest {
 
         assertThat(tables).containsExactly(
                 "answer_submission", "concept", "concept_progress", "delayed_check", "lesson", "question",
-                "question_version", "subject", "unit", "user_identity", "users");
+                "question_version", "spring_session", "spring_session_attributes", "subject", "unit", "user_identity",
+                "users");
     }
 
     @Test

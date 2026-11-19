@@ -1,6 +1,7 @@
 package app.retrievo.learning;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -118,7 +119,7 @@ class LearningLoopTest extends IntegrationTest {
                 {"clientSubmissionId": "%s", "questionVersionId": %d, "selected": "4"}
                 """.formatted(UUID.randomUUID(), version("lazy-loop-count"));
 
-        mvc.perform(post("/api/submissions").header("X-Dev-User-Id", userId)
+        mvc.perform(post("/api/submissions").header("X-Dev-User-Id", userId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isBadRequest());
         assertThat(count("answer_submission")).isZero();
@@ -407,7 +408,7 @@ class LearningLoopTest extends IntegrationTest {
         String body = """
                 {"clientSubmissionId": "%s", "questionVersionId": %d, "selected": "%s", "confidence": "%s", "mode": %s}
                 """.formatted(clientId, versionId, selected, confidence, mode == null ? "null" : "\"" + mode + "\"");
-        return mvc.perform(post("/api/submissions").header("X-Dev-User-Id", userId)
+        return mvc.perform(post("/api/submissions").header("X-Dev-User-Id", userId).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(body));
     }
 

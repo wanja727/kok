@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { ArrowRightIcon } from "@/components/ui/icons";
 import { LoadError } from "@/components/ui/LoadError";
-import { api } from "@/lib/api";
+import { api, apiMode } from "@/lib/api";
 import { useRemote } from "@/lib/useRemote";
 import { FirstRunSheet } from "../today/FirstRunSheet";
 
@@ -16,11 +16,23 @@ const SOURCE = "https://github.com/wanja727/retrievo";
 
 /**
  * 나: 프로필과, 이 앱이 왜 이렇게 묻는지 다시 볼 수 있는 곳.
- * 로그인(카카오, ADR-010)이 붙으면 연결된 계정과 로그아웃을 여기에 더한다.
+ * 로그아웃은 실제 백엔드(카카오 로그인)를 쓸 때만 보인다.
  */
 export function MeScreen() {
   const [state, retry] = useRemote(fetchMe);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const logout = async () => {
+    setLoggingOut(true);
+    try {
+      await api.logout();
+    } finally {
+      // 세션이 끝났으니 로그인 화면으로. 화면에 남은 내 데이터를 버리려고 새로 불러온다. 서버 응답이 실패해도 보낸다
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- 클라이언트 상태를 버리려고 전체를 새로 불러온다
+      window.location.href = "/login";
+    }
+  };
 
   if (state.status === "error") {
     return <LoadError what="내 정보를" message={state.message} onRetry={retry} />;
@@ -69,6 +81,19 @@ export function MeScreen() {
           <span className="text-[13px] text-soft">{process.env.NEXT_PUBLIC_APP_VERSION || "개발 중"}</span>
         </div>
       </section>
+
+      {apiMode === "http" && (
+        <section className="mx-6 mt-8" aria-label="계정">
+          <button
+            type="button"
+            onClick={logout}
+            disabled={loggingOut}
+            className="flex h-14 w-full items-center border-y border-line text-left text-[15px] text-muted disabled:text-faint"
+          >
+            {loggingOut ? "로그아웃하는 중" : "로그아웃"}
+          </button>
+        </section>
+      )}
 
       <div className="mt-auto pt-8" />
       <BottomNav active="나" />
