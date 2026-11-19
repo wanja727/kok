@@ -2,14 +2,14 @@ import Link from "next/link";
 
 const items = [
   { label: "오늘", href: "/" },
-  { label: "레슨", href: null },
+  { label: "레슨", href: "/lessons" },
   { label: "기록", href: null },
   { label: "나", href: null },
 ] as const;
 
 /**
  * 아이콘 없이 글자와 점만 쓰는 하단 메뉴 (ADR-018).
- * 레슨·기록·나 화면은 아직 없어서 누를 수 없게 둔다.
+ * 기록·나 화면은 아직 없어서 누를 수 없게 둔다.
  */
 export function BottomNav({ active }: { active: (typeof items)[number]["label"] }) {
   return (

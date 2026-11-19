@@ -1,5 +1,13 @@
 import { isCorrect } from "../grading";
-import type { RetrievoApi, LessonSummary, QuestionView, SubmissionResult, TodayCheck } from "./types";
+import { serviceDate } from "../schedule";
+import type {
+  ConceptStatus,
+  LessonSummary,
+  QuestionView,
+  RetrievoApi,
+  SubmissionResult,
+  TodayCheck,
+} from "./types";
 
 /*
  * 백엔드 없이 화면을 개발하는 목 API. 응답 형식은 실제 API와 같다.
@@ -7,14 +15,18 @@ import type { RetrievoApi, LessonSummary, QuestionView, SubmissionResult, TodayC
  */
 
 interface MockQuestion extends QuestionView {
+  lessonId: number;
   answer: string;
   explanation: string;
   sourceUrl: string | null;
 }
 
+const HIBERNATE_FETCHING = "https://docs.jboss.org/hibernate/orm/6.6/userguide/html_single/Hibernate_User_Guide.html#fetching";
+
 const questions: MockQuestion[] = [
   {
     questionVersionId: 101,
+    lessonId: 1,
     conceptId: 11,
     type: "MULTIPLE_CHOICE",
     body: "아래 코드를 실행하면 SELECT는 모두 몇 번 실행될까요?",
@@ -29,10 +41,42 @@ const questions: MockQuestion[] = [
     answer: "4",
     explanation:
       "팀 목록을 가져오는 SELECT 1번에, 팀마다 members를 읽는 SELECT가 10번 더 나가요. 목록 1번에 항목마다 N번, 그래서 N+1이에요.",
-    sourceUrl: "https://docs.jboss.org/hibernate/orm/6.6/userguide/html_single/Hibernate_User_Guide.html#fetching",
+    sourceUrl: HIBERNATE_FETCHING,
+  },
+  {
+    questionVersionId: 104,
+    lessonId: 1,
+    conceptId: 11,
+    type: "OX",
+    body: "연관관계를 EAGER로 바꾸면 findAll()에서 생기는 N+1이 사라진다.",
+    code: null,
+    choices: null,
+    answer: "X",
+    explanation:
+      "JPQL로 목록을 가져온 뒤 EAGER 연관관계를 채우려고 항목마다 SELECT가 다시 나가요. 쿼리 시점만 앞당겨질 뿐 N+1은 그대로예요.",
+    sourceUrl: HIBERNATE_FETCHING,
+  },
+  {
+    questionVersionId: 105,
+    lessonId: 1,
+    conceptId: 11,
+    type: "CODE_PREDICT",
+    body: "fetch join으로 바꾼 아래 코드에서 SELECT는 몇 번 나갈까요?",
+    code: [
+      '@Query("select t from Team t join fetch t.members")',
+      "List<Team> findAllWithMembers();",
+      "",
+      "teamRepository.findAllWithMembers()",
+      "    .forEach(t -> t.getMembers().size());",
+    ].join("\n"),
+    choices: ["1번", "2번", "11번"],
+    answer: "1",
+    explanation: "fetch join은 팀과 members를 한 번의 SELECT로 함께 가져와요. 루프에서 members를 읽어도 추가 쿼리가 없어요.",
+    sourceUrl: HIBERNATE_FETCHING,
   },
   {
     questionVersionId: 102,
+    lessonId: 2,
     conceptId: 12,
     type: "LINE_PICK",
     body: "트랜잭션 없이 실행되는 호출이 있는 줄을 고르세요.",
@@ -50,11 +94,11 @@ const questions: MockQuestion[] = [
     answer: "4",
     explanation:
       "this::issue는 같은 클래스 안의 호출이라 프록시를 거치지 않아요. 그래서 issue()의 @Transactional이 적용되지 않아요.",
-    sourceUrl:
-      "https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/annotations.html",
+    sourceUrl: "https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/annotations.html",
   },
   {
     questionVersionId: 103,
+    lessonId: 3,
     conceptId: 13,
     type: "OX",
     body: "SQL 표준의 REPEATABLE READ 격리 수준은 팬텀 리드를 막는다.",
@@ -65,66 +109,130 @@ const questions: MockQuestion[] = [
       "SQL 표준에서 REPEATABLE READ는 팬텀 리드를 허용하고, SERIALIZABLE만 막아요. MySQL InnoDB와 PostgreSQL은 구현 방식 덕분에 REPEATABLE READ에서도 대부분 막아 주지만, 표준이 보장하는 것은 아니에요.",
     sourceUrl: "https://www.postgresql.org/docs/current/transaction-iso.html",
   },
+  {
+    questionVersionId: 106,
+    lessonId: 5,
+    conceptId: 15,
+    type: "MULTIPLE_CHOICE",
+    body: "같은 결제 요청이 두 번 들어와도 한 번만 처리되게 하려면 무엇을 기준으로 막아야 할까요?",
+    code: null,
+    choices: ["요청이 들어온 시각", "클라이언트가 만든 멱등 키", "사용자 id", "결제 금액"],
+    answer: "2",
+    explanation:
+      "클라이언트가 요청마다 만든 멱등 키를 유니크 제약으로 저장하면, 같은 키로 다시 온 요청은 처음 결과를 돌려주고 다시 처리하지 않아요.",
+    sourceUrl: null,
+  },
+];
+
+const lessons: LessonSummary[] = [
+  { id: 1, key: "jpa-n-plus-1", unit: "JPA", title: "N+1 문제", questionCount: 3 },
+  { id: 2, key: "transactional-proxy", unit: "Spring", title: "@Transactional 자기 호출", questionCount: 1 },
+  { id: 3, key: "isolation-level", unit: "DB", title: "격리 수준과 팬텀 리드", questionCount: 1 },
+  { id: 4, key: "jpa-persistence-context", unit: "JPA", title: "영속성 컨텍스트", questionCount: 0 },
+  { id: 5, key: "idempotency", unit: "설계", title: "멱등성", questionCount: 1 },
 ];
 
 const conceptNames: Record<number, string> = {
   11: "JPA · N+1 문제",
   12: "Spring · @Transactional 자기 호출",
   13: "DB · 격리 수준과 팬텀 리드",
+  14: "JPA · 영속성 컨텍스트",
+  15: "설계 · 멱등성",
 };
 
-/** 개념마다 통과한 확인 수, 배운 지 며칠, 확실했는데 틀렸는지. 목록 순서도 백엔드처럼 확실했는데 틀린 개념이 먼저다 */
-const progress: Record<number, { attemptNo: number; learnedDaysAgo: number; sureWrong: boolean }> = {
-  12: { attemptNo: 1, learnedDaysAgo: 8, sureWrong: true },
-  11: { attemptNo: 1, learnedDaysAgo: 3, sureWrong: false },
-  13: { attemptNo: 2, learnedDaysAgo: 7, sureWrong: false },
+const conceptLesson: Record<number, number> = { 11: 1, 12: 2, 13: 3, 14: 4, 15: 5 };
+
+/**
+ * 개념마다 통과한 확인 수(0 = 배우는 중, 4 = 졸업), 배운 지 며칠, 다음 확인까지 며칠, 확실했는데 틀렸는지.
+ * 15(멱등성)는 아직 풀지 않은 개념이라 없다
+ */
+const progress: Record<number, { stage: number; learnedDaysAgo: number; dueInDays: number; sureWrong: boolean }> = {
+  12: { stage: 1, learnedDaysAgo: 8, dueInDays: 0, sureWrong: true },
+  11: { stage: 1, learnedDaysAgo: 3, dueInDays: 0, sureWrong: false },
+  13: { stage: 2, learnedDaysAgo: 7, dueInDays: 0, sureWrong: false },
+  14: { stage: 4, learnedDaysAgo: 30, dueInDays: 0, sureWrong: false },
 };
 
-const lessons: LessonSummary[] = [
-  { id: 1, unit: "JPA", title: "N+1 문제", questionCount: 8 },
-  { id: 2, unit: "Spring", title: "@Transactional 자기 호출", questionCount: 8 },
-  { id: 3, unit: "DB", title: "격리 수준과 팬텀 리드", questionCount: 8 },
-];
+/** 오늘 레슨에서 맞힌 답 수. 같은 날 3번 맞히면 배운 날 기준을 통과한다 (백엔드와 같은 규칙) */
+const lessonCorrectToday: Record<number, number> = {};
 
 /** 같은 clientSubmissionId로 다시 보내면 처음 결과를 돌려준다 (백엔드와 같은 규칙) */
 const submitted = new Map<string, SubmissionResult>();
 let nextSubmissionId = 1;
 
 function view(q: MockQuestion): QuestionView {
-  const { answer: _answer, explanation: _explanation, sourceUrl: _sourceUrl, ...rest } = q;
-  void _answer;
-  void _explanation;
-  void _sourceUrl;
-  return rest;
+  const { conceptId, questionVersionId, type, body, code, choices } = q;
+  return { conceptId, questionVersionId, type, body, code, choices };
 }
 
-function daysAgo(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
-}
+const daysFromToday = (days: number) => serviceDate(days);
 
 function delay<T>(value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), 150));
 }
 
+/** 처음 푼 개념은 배우는 중(0단계)으로 만들고, 오늘 3번 맞히면 1단계로 올려 3일 뒤 확인을 잡는다 */
+function recordLessonAnswer(conceptId: number, correct: boolean) {
+  progress[conceptId] ??= { stage: 0, learnedDaysAgo: 0, dueInDays: 0, sureWrong: false };
+  if (!correct || progress[conceptId].stage > 0) return;
+  lessonCorrectToday[conceptId] = (lessonCorrectToday[conceptId] ?? 0) + 1;
+  if (lessonCorrectToday[conceptId] >= 3) {
+    progress[conceptId] = { stage: 1, learnedDaysAgo: 0, dueInDays: 3, sureWrong: false };
+  }
+}
+
 export const mockApi: RetrievoApi = {
-  todayChecks: () =>
-    delay<TodayCheck[]>(
-      [...questions]
-        .sort((a, b) => Number(progress[b.conceptId].sureWrong) - Number(progress[a.conceptId].sureWrong))
-        .map((q) => ({
-          conceptId: q.conceptId,
-          conceptName: conceptNames[q.conceptId],
-          attemptNo: progress[q.conceptId].attemptNo,
-          dueDate: daysAgo(0),
-          learnedOn: daysAgo(progress[q.conceptId].learnedDaysAgo),
-          sureWrong: progress[q.conceptId].sureWrong,
-          question: view(q),
-        })),
-    ),
+  todayChecks: () => {
+    const due = Object.entries(progress)
+      .map(([id, p]) => ({ conceptId: Number(id), ...p }))
+      .filter((p) => p.stage >= 1 && p.stage < 4 && p.dueInDays <= 0)
+      .sort((a, b) => Number(b.sureWrong) - Number(a.sureWrong));
+    return delay<TodayCheck[]>(
+      due.flatMap((p) => {
+        const q = questions.find((it) => it.conceptId === p.conceptId);
+        if (!q) return [];
+        return [
+          {
+            conceptId: p.conceptId,
+            conceptName: conceptNames[p.conceptId],
+            attemptNo: p.stage,
+            dueDate: daysFromToday(0),
+            learnedOn: daysFromToday(-p.learnedDaysAgo),
+            sureWrong: p.sureWrong,
+            question: view(q),
+          },
+        ];
+      }),
+    );
+  },
 
   lessons: () => delay(lessons),
+
+  lessonQuestions: async (lessonId) => {
+    if (!lessons.some((l) => l.id === lessonId)) throw new Error("없는 레슨이다");
+    return delay(questions.filter((q) => q.lessonId === lessonId).map(view));
+  },
+
+  concepts: () =>
+    delay<ConceptStatus[]>(
+      Object.entries(progress).map(([id, p]) => {
+        const conceptId = Number(id);
+        const lesson = lessons.find((l) => l.id === conceptLesson[conceptId]);
+        const graduated = p.stage >= 4;
+        return {
+          conceptId,
+          conceptName: conceptNames[conceptId],
+          lessonId: lesson?.id ?? 0,
+          lessonTitle: lesson?.title ?? "",
+          stage: p.stage,
+          graduated,
+          learnedOn: p.stage > 0 ? daysFromToday(-p.learnedDaysAgo) : null,
+          dueDate: graduated || p.stage === 0 ? null : daysFromToday(p.dueInDays),
+          sureWrong: p.sureWrong,
+          graduatedAt: graduated ? daysFromToday(-9) : null,
+        };
+      }),
+    ),
 
   submit: async (request) => {
     const existing = submitted.get(request.clientSubmissionId);
@@ -133,9 +241,12 @@ export const mockApi: RetrievoApi = {
     const q = questions.find((it) => it.questionVersionId === request.questionVersionId);
     if (!q) throw new Error("없는 문제다");
 
+    const correct = isCorrect(q.type, request.selected, q.answer);
+    if (request.mode === "LESSON") recordLessonAnswer(q.conceptId, correct);
+
     const result: SubmissionResult = {
       submissionId: nextSubmissionId++,
-      correct: isCorrect(q.type, request.selected, q.answer),
+      correct,
       selected: request.selected,
       answer: q.answer,
       confidence: request.confidence,

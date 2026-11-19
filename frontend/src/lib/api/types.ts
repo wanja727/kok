@@ -1,7 +1,8 @@
 /*
  * 백엔드 API 응답·요청 형식. backend의 record와 같게 둔다.
  * - QuestionView: content/QuestionView.java
- * - TodayCheck: learning/DelayedCheckController.TodayCheck
+ * - TodayCheck, ConceptStatus: learning/DelayedCheckController
+ * - LessonSummary: content/LessonQueryService.LessonSummary
  * - SubmitRequest / SubmissionResult: learning/SubmitRequest.java, learning/SubmissionResult.java
  */
 
@@ -52,6 +53,8 @@ export interface ConceptStatus {
 
 export interface LessonSummary {
   id: number;
+  /** dev-lessons의 레슨 slug. 레슨 본문 주소에 쓴다 */
+  key: string;
   unit: string;
   title: string;
   questionCount: number;
@@ -82,6 +85,10 @@ export interface SubmissionResult {
 export interface RetrievoApi {
   todayChecks(): Promise<TodayCheck[]>;
   lessons(): Promise<LessonSummary[]>;
+  /** 레슨의 판정 문제. 정답과 해설은 담지 않는다 */
+  lessonQuestions(lessonId: number): Promise<QuestionView[]>;
+  /** 풀어 본 개념의 진행 상태 */
+  concepts(): Promise<ConceptStatus[]>;
   submit(request: SubmitRequest): Promise<SubmissionResult>;
 }
 

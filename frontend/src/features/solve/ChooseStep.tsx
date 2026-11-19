@@ -3,28 +3,26 @@
 import { CodeBlock, type LineMark } from "@/components/ui/CodeBlock";
 import { ConfidenceTabs } from "@/components/ui/ConfidenceTabs";
 import { CheckIcon } from "@/components/ui/icons";
-import type { Confidence, TodayCheck } from "@/lib/api";
+import type { Confidence, QuestionView } from "@/lib/api";
 import { formatLines, parseLines } from "@/lib/grading";
 
 const LETTERS = "ABCDEFGH";
 
 export function ChooseStep({
-  check,
+  question: q,
   draft,
   selected,
   confidence,
   onSelect,
   onConfidence,
 }: {
-  check: TodayCheck;
+  question: QuestionView;
   draft: string;
   selected: string | null;
   confidence: Confidence | null;
   onSelect: (selected: string | null) => void;
   onConfidence: (confidence: Confidence) => void;
 }) {
-  const q = check.question;
-
   return (
     <div className="pb-4">
       <h1 className="mx-6 mt-8 text-[19px] leading-normal font-semibold tracking-[-0.4px]">{q.body}</h1>

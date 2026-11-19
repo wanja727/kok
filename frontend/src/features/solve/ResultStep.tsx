@@ -1,6 +1,6 @@
 import { CodeBlock, type LineMark } from "@/components/ui/CodeBlock";
 import { CONFIDENCE_LABEL } from "@/components/ui/ConfidenceTabs";
-import type { SubmissionResult, TodayCheck } from "@/lib/api";
+import type { QuestionView, SubmissionResult } from "@/lib/api";
 import { describeAnswer, parseLines } from "@/lib/grading";
 
 /** 결과에 붙이는 안내. 확신과 결과가 어긋난 경우에만 보여준다 */
@@ -14,8 +14,7 @@ function noteFor(result: SubmissionResult): string | null {
   return null;
 }
 
-export function ResultStep({ check, result }: { check: TodayCheck; result: SubmissionResult }) {
-  const q = check.question;
+export function ResultStep({ question: q, result }: { question: QuestionView; result: SubmissionResult }) {
   const answer = describeAnswer(q.type, result.answer, q.choices);
   const mine = describeAnswer(q.type, result.selected, q.choices);
   const big = answer.length <= 4;

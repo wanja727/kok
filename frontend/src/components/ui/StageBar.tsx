@@ -1,5 +1,4 @@
-/** 개념마다 확인 횟수: 배운 날, 3일, 7일, 21일 (ADR-017). 네 번 모두 통과하면 졸업 */
-export const TOTAL_CHECKS = 4;
+import { TOTAL_CHECKS } from "@/lib/stages";
 
 /** "확인 2/4"와 막대 네 칸. 통과한 칸만 골드 */
 export function StageBar({ passed, total = TOTAL_CHECKS }: { passed: number; total?: number }) {

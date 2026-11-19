@@ -12,6 +12,12 @@ export function passedChecks(attemptNo: number): number {
   return attemptNo;
 }
 
+/** 서비스 날짜(YYYY-MM-DD). 하루는 KST 새벽 4시에 바뀐다 (백엔드 ServiceDates와 같다). offsetDays만큼 앞뒤로 옮긴다 */
+export function serviceDate(offsetDays = 0, now: number = Date.now()): string {
+  const shifted = now + (9 - 4) * 3_600_000 + offsetDays * 86_400_000;
+  return new Date(shifted).toISOString().slice(0, 10);
+}
+
 /** 두 날짜(YYYY-MM-DD) 사이의 날 수 */
 export function daysBetween(from: string, to: string): number {
   const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
