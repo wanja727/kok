@@ -21,9 +21,9 @@ const PRINCIPLES = [
     source: "Kang, McDermott & Roediger, 2007",
   },
   {
-    title: "배운 날 3번, 그 뒤 3번",
-    text: "배운 날 세 번 맞힐 때까지 묻고, 넓은 간격으로 세 번 더 확인해요.",
-    source: "Rawson & Dunlosky, 2011",
+    title: "배운 날 맞힐 때까지, 그 뒤 3번",
+    text: "배운 날 틀린 문제는 다른 문제를 푼 뒤 다시 물어 모두 맞힐 때까지 이어 가요. 그 뒤 넓은 간격으로 세 번 더 확인하고, 확인에서 틀리면 그날 다른 문제로 다시 배워요.",
+    source: "Rawson & Dunlosky, 2011 · 2022",
   },
   {
     title: "간격은 넓게",

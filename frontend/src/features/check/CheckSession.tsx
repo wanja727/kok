@@ -9,6 +9,7 @@ import { useRemote } from "@/lib/useRemote";
 import { QuestionFlow } from "../solve/QuestionFlow";
 import { DoneView } from "./DoneView";
 import { GraduateView } from "./GraduateView";
+import { RelearnSession, type RelearnItem } from "./RelearnSession";
 import { TeachStep } from "./TeachStep";
 
 const fetchToday = () => api.todayChecks();
@@ -19,12 +20,16 @@ type After = "teach" | "graduate" | null;
 /**
  * 오늘의 지연 확인을 하나씩 꺼낸다. 개념마다 처음과 다른 문제 하나.
  * 마지막(21일) 확인을 맞히면 졸업한다: 가르치듯 말해 보기(자기 채점) → 졸업 화면 (20장, ADR-017)
+ * 틀린 개념은 확인을 다 마친 뒤 다른 문제를 맞힐 때까지 다시 배운다. 연습으로만 남고 일정은 바뀌지 않는다 (ADR-021)
  */
 export function CheckSession() {
   const [load, retry] = useRemote(fetchToday);
   const [index, setIndex] = useState(0);
   const [results, setResults] = useState<SubmissionResult[]>([]);
   const [after, setAfter] = useState<After>(null);
+  /** 오늘 확인에서 틀린 개념. 확인을 다 마친 뒤 다른 문제로 다시 배운다 (ADR-021) */
+  const [relearn, setRelearn] = useState<RelearnItem[]>([]);
+  const [relearned, setRelearned] = useState(false);
 
   if (load.status === "loading") {
     return <main className="app-frame" aria-busy="true" />;
@@ -35,7 +40,24 @@ export function CheckSession() {
 
   const checks = load.data;
   if (checks.length === 0 || index >= checks.length) {
-    return <DoneView total={checks.length} correct={results.filter((r) => r.correct).length} />;
+    if (relearn.length > 0 && !relearned) {
+      return (
+        <RelearnSession
+          items={relearn}
+          onDone={() => {
+            setRelearned(true);
+            window.scrollTo(0, 0);
+          }}
+        />
+      );
+    }
+    return (
+      <DoneView
+        total={checks.length}
+        correct={results.filter((r) => r.correct).length}
+        relearned={relearn.length}
+      />
+    );
   }
 
   const check = checks[index];
@@ -72,7 +94,9 @@ export function CheckSession() {
   }
 
   const isLastCheck = check.attemptNo === TOTAL_CHECKS - 1;
-  const graduated = isLastCheck && results.at(-1)?.correct === true && results.length === index + 1;
+  const answeredNow = results.length === index + 1;
+  const graduated = isLastCheck && answeredNow && results.at(-1)?.correct === true;
+  const wrongNow = answeredNow && results.at(-1)?.correct === false;
   return (
     <QuestionFlow
       key={check.question.questionVersionId}
@@ -80,8 +104,24 @@ export function CheckSession() {
       context={`${check.conceptName} · ${isLastCheck ? "21일 뒤 마지막 확인" : "처음과 다른 문제"}`}
       mode="DELAYED_CHECK"
       topBar={<SessionTopBar title={`${index + 1} / ${checks.length}`} current={index + 1} total={checks.length} />}
-      nextLabel={graduated ? (check.teach ? "졸업 확인" : "졸업") : index + 1 < checks.length ? "다음 문제" : "마치기"}
-      onAnswered={(result) => setResults((rs) => [...rs, result])}
+      nextLabel={
+        graduated
+          ? check.teach
+            ? "졸업 확인"
+            : "졸업"
+          : index + 1 < checks.length
+            ? "다음 문제"
+            : wrongNow || relearn.length > 0
+              ? "틀린 개념 다시 배우기"
+              : "마치기"
+      }
+      nextHint={wrongNow ? "틀린 개념은 오늘 확인을 다 마친 뒤 다른 문제로 다시 배워요." : undefined}
+      onAnswered={(result) => {
+        setResults((rs) => [...rs, result]);
+        if (!result.correct) {
+          setRelearn((items) => [...items, { conceptId: check.conceptId, conceptName: check.conceptName }]);
+        }
+      }}
       onNext={() => {
         if (graduated) setAfter(check.teach ? "teach" : "graduate");
         else next();

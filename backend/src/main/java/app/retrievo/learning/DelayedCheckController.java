@@ -9,8 +9,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 public class DelayedCheckController {
@@ -60,6 +63,20 @@ public class DelayedCheckController {
                         p.stage(), p.stage() == ReviewSchedule.GRADUATED, p.learnedOn(), p.dueDate(),
                         p.sureWrong(), p.graduatedAt()))
                 .toList();
+    }
+
+    /**
+     * 연습할 문제 하나 (ADR-021). 지연 확인에서 틀린 뒤 그날 다시 배울 때 쓴다. 답은 mode=PRACTICE로 제출하고 일정은 바뀌지 않는다.
+     * 아직 안 푼 문제를 먼저, 다 풀었으면 가장 오래전에 푼 문제라서 방금 틀린 문제와 다른 문제가 나온다.
+     * 배운 날 기준을 넘은 개념(1단계 이상)만 연습할 수 있다
+     */
+    @GetMapping("/api/me/concepts/{conceptId}/practice-question")
+    public QuestionView practiceQuestion(@CurrentUser long userId, @PathVariable long conceptId) {
+        if (!progresses.learned(userId, conceptId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "연습할 수 있는 개념이 아니다");
+        }
+        return lessons.questionForDelayedCheck(userId, conceptId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "연습할 문제가 없다"));
     }
 
     private Optional<TodayCheck> toCheck(long userId, ConceptProgresses.Due due) {

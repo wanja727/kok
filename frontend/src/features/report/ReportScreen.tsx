@@ -255,7 +255,7 @@ function StageSection({ report }: { report: Report }) {
       <SectionTitle id="stage-title">개념이 어디까지 왔는지</SectionTitle>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
         {learned === 0 ? (
-          "레슨에서 같은 날 3번 맞힌 개념부터 여기에 쌓여요."
+          "레슨 문제를 같은 날 모두 맞힌 개념부터 여기에 쌓여요."
         ) : (
           <>
             배운 개념 {learned}개 가운데 <b className="font-semibold text-ink">{graduated}개</b>가 졸업해서 더는 묻지 않아요.

@@ -27,6 +27,13 @@ class ReviewScheduleTest {
     }
 
     @Test
+    void 배운_날_기준은_판정_문제를_모두_맞히는_것이다() {
+        assertThat(ReviewSchedule.learnedToday(3, 3)).isTrue();
+        assertThat(ReviewSchedule.learnedToday(4, 3)).isFalse();
+        assertThat(ReviewSchedule.learnedToday(0, 0)).as("판정 문제가 없는 개념은 배울 수 없다").isFalse();
+    }
+
+    @Test
     void 늦게_확인해도_다음_간격은_확인한_날부터_센다() {
         LocalDate late = LEARNED.plusDays(10);
         assertThat(ReviewSchedule.afterCheck(1, true, Confidence.SURE, late))

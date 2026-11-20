@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -32,7 +33,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 /**
- * 핵심 루프: 레슨 문제 보기(정답 없이) → 확신도와 함께 답 내기 → 채점·해설 → 배운 날 3번 정답이면 지연 확인 예약
+ * 핵심 루프: 레슨 문제 보기(정답 없이) → 확신도와 함께 답 내기 → 채점·해설 → 배운 날 판정 문제를 모두 맞히면 지연 확인 예약 (ADR-021)
  * → 3일·7일·21일 뒤 다른 문제로 확인 → 세 번 통과하면 졸업 (ADR-017).
  * 시작 시각은 2026-11-17 10:00 KST (서비스 날짜 2026-11-17).
  */
@@ -173,13 +174,14 @@ class LearningLoopTest extends IntegrationTest {
     }
 
     @Test
-    void 배운_날_3번_맞히면_3일_뒤_첫_확인이_잡힌다() throws Exception {
+    void 배운_날_판정_문제를_모두_맞히면_3일_뒤_첫_확인이_잡힌다() throws Exception {
         submit(version("lazy-loop-count"), "4", "SURE", null).andExpect(status().isOk());
+        submit(version("lazy-loop-count"), "4", "SURE", null).andExpect(status().isOk()); // 같은 문제를 또 맞혀도 한 문제다
         submit(version("lazy-loop-ox"), "O", "SURE", null).andExpect(status().isOk()); // 틀린 답은 세지 않는다
-        submit(version("lazy-loop-ox"), "X", "SURE", null).andExpect(status().isOk());
         assertThat(progress("lazy-loop")).isEqualTo(new Progress(0, null, null));
 
-        submit(version("lazy-loop-count"), "4", "UNSURE", null).andExpect(status().isOk());
+        // 틀린 문제를 다시 풀어 맞히면 판정 문제를 모두 맞힌 것이다
+        submit(version("lazy-loop-ox"), "X", "UNSURE", null).andExpect(status().isOk());
         assertThat(progress("lazy-loop")).isEqualTo(new Progress(1, DAY0, DAY0.plusDays(3)));
 
         // 다음 날 같은 개념을 레슨에서 또 풀어도 일정은 그대로다
@@ -191,16 +193,15 @@ class LearningLoopTest extends IntegrationTest {
     @Test
     void 배운_날_기준은_같은_날_정답만_센다() throws Exception {
         submit(version("lazy-loop-count"), "4", "SURE", null).andExpect(status().isOk());
-        submit(version("lazy-loop-ox"), "X", "SURE", null).andExpect(status().isOk());
         clock.advance(Duration.ofDays(1));
-        submit(version("lazy-loop-count"), "4", "SURE", null).andExpect(status().isOk());
+        submit(version("lazy-loop-ox"), "X", "SURE", null).andExpect(status().isOk());
 
         assertThat(progress("lazy-loop").stage()).isZero();
     }
 
     @Test
-    void 사흘째에_처음과_다른_문제로_다시_묻는다() throws Exception {
-        learn("lazy-loop-count", "4");
+    void 사흘째에_가장_오래전에_푼_문제로_다시_묻는다() throws Exception {
+        learn("lazy-loop");
 
         clock.advance(Duration.ofDays(2));
         assertThat(getJson("/api/me/delayed-checks/today")).isEmpty();
@@ -210,14 +211,14 @@ class LearningLoopTest extends IntegrationTest {
         assertThat(today).hasSize(1);
         assertThat(today.get(0).get("conceptName").asText()).isEqualTo("지연 로딩 컬렉션을 루프에서 읽을 때 생기는 추가 쿼리");
         assertThat(today.get(0).get("attemptNo").asInt()).isEqualTo(1);
-        // 처음 푼 객관식이 아니라 아직 안 푼 OX 문제를 낸다
-        assertThat(today.get(0).get("question").get("questionVersionId").asLong()).isEqualTo(version("lazy-loop-ox"));
+        // 레슨에서 판정 문제를 모두 풀었으니 가장 오래전에 푼 객관식을 낸다 (learn은 객관식 → OX 순서로 푼다)
+        assertThat(today.get(0).get("question").get("questionVersionId").asLong()).isEqualTo(version("lazy-loop-count"));
         assertThat(today.get(0).get("question").has("answer")).isFalse();
     }
 
     @Test
     void 지연_확인을_맞히면_다음_단계로_가고_오늘_목록에서_빠진다() throws Exception {
-        learn("lazy-loop-count", "4");
+        learn("lazy-loop");
         clock.advance(Duration.ofDays(3));
 
         submit(version("lazy-loop-ox"), "X", "UNSURE", "DELAYED_CHECK").andExpect(status().isOk())
@@ -233,7 +234,7 @@ class LearningLoopTest extends IntegrationTest {
 
     @Test
     void 재확인_세_번을_모두_통과하면_졸업하고_더는_묻지_않는다() throws Exception {
-        learn("lazy-loop-count", "4");
+        learn("lazy-loop");
 
         clock.advance(Duration.ofDays(3));
         checkToday("lazy-loop", true, "SURE");
@@ -257,8 +258,9 @@ class LearningLoopTest extends IntegrationTest {
 
     @Test
     void 기록은_실제_풀이와_확인에서_센_값만_준다() throws Exception {
-        // 배운 날: 맞힘 3 + 틀림 1 (확실했는데 틀림)
-        learn("lazy-loop-count", "4");
+        // 배운 날 첫 시도: 맞힘 2 + 틀림 1 (확실했는데 틀림). 다시 풀어 또 틀린 답은 첫 시도가 아니라 정답률에 넣지 않는다
+        learn("lazy-loop");
+        submit(version("fetch-join-predict"), "2", "SURE", null).andExpect(status().isOk());
         submit(version("fetch-join-predict"), "2", "SURE", null).andExpect(status().isOk());
         // 3일 확인 맞힘, 7일 확인 틀림(애매)
         clock.advance(Duration.ofDays(3));
@@ -271,8 +273,8 @@ class LearningLoopTest extends IntegrationTest {
         assertThat(report.get("today").asText()).isEqualTo(DAY0.plusDays(7).toString());
         assertThat(report.get("retrievals").asInt()).isEqualTo(6);
         JsonNode curve = report.get("curve");
-        assertThat(curve.get("learnedDay").get("correct").asInt()).isEqualTo(3);
-        assertThat(curve.get("learnedDay").get("total").asInt()).isEqualTo(4);
+        assertThat(curve.get("learnedDay").get("correct").asInt()).isEqualTo(2);
+        assertThat(curve.get("learnedDay").get("total").asInt()).isEqualTo(3);
         assertThat(curve.get("day3").get("correct").asInt()).isEqualTo(1);
         assertThat(curve.get("day7").get("correct").asInt()).isZero();
         assertThat(curve.get("day7").get("total").asInt()).isEqualTo(1);
@@ -283,8 +285,8 @@ class LearningLoopTest extends IntegrationTest {
         // 확신도 순서는 확실 → 애매 → 모름이고 답이 없는 확신도도 0으로 온다
         JsonNode confidence = report.get("confidence");
         assertThat(confidence.get(0).get("confidence").asText()).isEqualTo("SURE");
-        assertThat(confidence.get(0).get("correct").asInt()).isEqualTo(4);
-        assertThat(confidence.get(0).get("total").asInt()).isEqualTo(5);
+        assertThat(confidence.get(0).get("correct").asInt()).isEqualTo(3);
+        assertThat(confidence.get(0).get("total").asInt()).isEqualTo(4);
         assertThat(confidence.get(1).get("total").asInt()).isEqualTo(1);
         assertThat(confidence.get(2).get("total").asInt()).isZero();
         // 답을 낸 날은 배운 날, 3일 뒤, 7일 뒤
@@ -294,7 +296,7 @@ class LearningLoopTest extends IntegrationTest {
 
     @Test
     void 마지막_확인에만_가르치듯_말해_볼_서술형_질문을_함께_준다() throws Exception {
-        learn("fetch-join-predict", "1");
+        learn("fetch-join");
         clock.advance(Duration.ofDays(3));
         assertThat(getJson("/api/me/delayed-checks/today").get(0).get("teach").isNull()).isTrue();
         checkToday("fetch-join", true, "SURE");
@@ -312,7 +314,7 @@ class LearningLoopTest extends IntegrationTest {
 
     @Test
     void 서술형_문제가_없는_개념은_마지막_확인에도_teach가_없다() throws Exception {
-        learn("lazy-loop-count", "4");
+        learn("lazy-loop");
         clock.advance(Duration.ofDays(3));
         checkToday("lazy-loop", true, "SURE");
         clock.advance(Duration.ofDays(4));
@@ -338,7 +340,7 @@ class LearningLoopTest extends IntegrationTest {
 
     @Test
     void 재확인에서_틀리면_한_단계_돌아간다() throws Exception {
-        learn("lazy-loop-count", "4");
+        learn("lazy-loop");
         clock.advance(Duration.ofDays(3));
         checkToday("lazy-loop", true, "SURE");
         clock.advance(Duration.ofDays(4));
@@ -350,8 +352,8 @@ class LearningLoopTest extends IntegrationTest {
 
     @Test
     void 확실했는데_틀린_개념은_다음_날_다른_개념보다_먼저_묻는다() throws Exception {
-        learn("fetch-join-predict", "1");
-        learn("lazy-loop-count", "4");
+        learn("fetch-join");
+        learn("lazy-loop");
         clock.advance(Duration.ofDays(3));
 
         // fetch-join은 오늘 확인하지 않고 미룬다. lazy-loop은 확실하다고 했는데 틀린다
@@ -375,7 +377,7 @@ class LearningLoopTest extends IntegrationTest {
         assertThat(count("answer_submission")).isEqualTo(1);
 
         // 배운 날 기준을 통과해도 사흘이 지나기 전에는 받지 않는다
-        learn("lazy-loop-count", "4");
+        learn("lazy-loop");
         clock.advance(Duration.ofDays(2));
         submit(version("lazy-loop-ox"), "X", "SURE", "DELAYED_CHECK").andExpect(status().isConflict());
     }
@@ -384,12 +386,56 @@ class LearningLoopTest extends IntegrationTest {
     void 새벽_4시_전에_푼_문제는_전날_공부로_센다() throws Exception {
         clock.set(Instant.parse("2026-11-16T18:30:00Z")); // 2026-11-17 03:30 KST
 
-        learn("lazy-loop-count", "4");
+        learn("lazy-loop");
 
         assertThat(jdbc.queryForList("select distinct service_date from answer_submission", LocalDate.class))
                 .containsExactly(LocalDate.of(2026, 11, 16));
         assertThat(progress("lazy-loop"))
                 .isEqualTo(new Progress(1, LocalDate.of(2026, 11, 16), LocalDate.of(2026, 11, 19)));
+    }
+
+    @Test
+    void 지연_확인에서_틀리면_다른_문제로_연습하고_연습은_일정을_바꾸지_않는다() throws Exception {
+        learn("lazy-loop");
+        clock.advance(Duration.ofDays(3));
+        checkToday("lazy-loop", false, "UNSURE");
+        Progress afterCheck = progress("lazy-loop");
+
+        long conceptId = conceptId("lazy-loop");
+        JsonNode practice = getJson("/api/me/concepts/" + conceptId + "/practice-question");
+        // 방금 틀린 객관식이 아니라 다른 문제(OX)를 낸다. 정답은 주지 않는다
+        assertThat(practice.get("questionVersionId").asLong()).isEqualTo(version("lazy-loop-ox"));
+        assertThat(practice.has("answer")).isFalse();
+
+        submit(version("lazy-loop-ox"), "X", "SURE", "PRACTICE").andExpect(status().isOk())
+                .andExpect(jsonPath("$.correct").value(true))
+                .andExpect(jsonPath("$.delayedCheck").value(false));
+        assertThat(progress("lazy-loop")).isEqualTo(afterCheck);
+        assertThat(count("delayed_check")).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select first_attempt from answer_submission order by id desc limit 1",
+                Boolean.class)).isFalse();
+    }
+
+    @Test
+    void 배우는_중인_개념은_연습할_수_없다() throws Exception {
+        submit(version("lazy-loop-count"), "4", "SURE", null).andExpect(status().isOk());
+
+        mvc.perform(get("/api/me/concepts/" + conceptId("lazy-loop") + "/practice-question")
+                        .header("X-Dev-User-Id", userId))
+                .andExpect(status().isNotFound());
+        submit(version("lazy-loop-ox"), "X", "SURE", "PRACTICE").andExpect(status().isConflict());
+        assertThat(count("answer_submission")).isEqualTo(1);
+    }
+
+    @Test
+    void 끝낸_레슨을_다시_풀면_첫_시도가_아니고_일정도_그대로다() throws Exception {
+        learn("lazy-loop");
+        clock.advance(Duration.ofDays(1));
+        submit(version("lazy-loop-count"), "1", "SURE", null).andExpect(status().isOk());
+
+        assertThat(progress("lazy-loop")).isEqualTo(new Progress(1, DAY0, DAY0.plusDays(3)));
+        assertThat(jdbc.queryForList("select first_attempt from answer_submission order by id", Boolean.class))
+                .containsExactly(true, true, false);
     }
 
     @Test
@@ -427,11 +473,20 @@ class LearningLoopTest extends IntegrationTest {
                 Long.class, "dev/n-plus-1/" + questionKey);
     }
 
-    /** 레슨에서 같은 문제를 세 번 맞혀 배운 날 기준을 통과한다 */
-    private void learn(String questionKey, String answer) throws Exception {
-        for (int i = 0; i < 3; i++) {
-            submit(version(questionKey), answer, "SURE", null).andExpect(status().isOk());
+    /** 레슨에서 개념의 판정 문제를 순서대로 모두 맞혀 배운 날 기준을 통과한다 */
+    private void learn(String conceptKey) throws Exception {
+        List<Map<String, Object>> questions = jdbc.queryForList("""
+                select v.id, v.answer from question q
+                join question_version v on v.id = q.current_version_id
+                join concept c on c.id = q.concept_id
+                where c.external_key = ? and q.purpose = 'JUDGMENT' and q.status = 'REVIEWED'
+                order by q.sort_order, q.id
+                """, "dev/n-plus-1/" + conceptKey);
+        for (Map<String, Object> q : questions) {
+            submit(((Number) q.get("id")).longValue(), (String) q.get("answer"), "SURE", null)
+                    .andExpect(status().isOk());
         }
+        assertThat(progress(conceptKey).stage()).isEqualTo(1);
     }
 
     /** 오늘 목록에서 이 개념의 문제를 찾아 맞히거나 틀린다 */
@@ -468,6 +523,11 @@ class LearningLoopTest extends IntegrationTest {
                 where p.user_id = ? and c.external_key = ?
                 """, (rs, n) -> new Progress(rs.getInt("stage"), rs.getObject("learned_on", LocalDate.class),
                 rs.getObject("due_date", LocalDate.class)), userId, "dev/n-plus-1/" + conceptKey);
+    }
+
+    private long conceptId(String conceptKey) {
+        return jdbc.queryForObject("select id from concept where external_key = ?", Long.class,
+                "dev/n-plus-1/" + conceptKey);
     }
 
     private int count(String table) {

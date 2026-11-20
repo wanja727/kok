@@ -13,7 +13,8 @@ export type QuestionType = "MULTIPLE_CHOICE" | "OX" | "CODE_PREDICT" | "LINE_PIC
 
 export type Confidence = "SURE" | "UNSURE" | "UNKNOWN";
 
-export type SubmissionMode = "LESSON" | "DELAYED_CHECK";
+/** LESSON: 레슨. DELAYED_CHECK: 오늘 예정된 지연 확인. PRACTICE: 연습(지연 확인 오답 뒤 다시 배우기). 일정은 바뀌지 않는다 */
+export type SubmissionMode = "LESSON" | "DELAYED_CHECK" | "PRACTICE";
 
 /** 답을 내기 전에 보여주는 문제. 정답과 해설은 담지 않는다 (답 먼저) */
 export interface QuestionView {
@@ -32,7 +33,7 @@ export interface TodayCheck {
   /** 이번 확인 전까지 통과한 확인 수(1~3). 1 = 3일, 2 = 7일, 3 = 21일 확인. 4가 되면 졸업 */
   attemptNo: number;
   dueDate: string;
-  /** 배운 날 기준(같은 날 3번 정답)을 통과한 날 */
+  /** 배운 날 기준(같은 날 판정 문제 모두 정답)을 통과한 날 */
   learnedOn: string | null;
   /** 지난 확인에서 확실했는데 틀려서 다음 날 다시 묻는 개념. 목록 맨 앞에 온다 */
   sureWrong: boolean;
@@ -172,6 +173,8 @@ export interface RetrievoApi {
   lessonQuestions(lessonId: number): Promise<QuestionView[]>;
   /** 풀어 본 개념의 진행 상태 */
   concepts(): Promise<ConceptStatus[]>;
+  /** 연습할 문제 하나. 배운 개념만. 아직 안 푼 문제나 가장 오래전에 푼 문제라 방금 틀린 문제와 다르다 (ADR-021) */
+  practiceQuestion(conceptId: number): Promise<QuestionView>;
   report(): Promise<Report>;
   me(): Promise<Me>;
   logout(): Promise<void>;

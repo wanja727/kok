@@ -33,7 +33,7 @@ public class ReportController {
     }
 
     /**
-     * 기억 곡선의 점. learnedDay: 레슨에서 낸 답의 정답률(배운 날).
+     * 기억 곡선의 점. learnedDay: 레슨에서 처음 낸 답의 정답률(배운 날). 다시 푼 답은 세지 않는다 (ADR-021).
      * day3·day7·day21: 그 단계의 재확인에서 맞힌 비율 (delayed_check.attempt_no 1·2·3)
      */
     public record Curve(Rate learnedDay, Rate day3, Rate day7, Rate day21) {
@@ -68,7 +68,7 @@ public class ReportController {
         Rate learned = jdbc.sql("""
                         select count(*) filter (where correct) as correct, count(*) as total
                         from answer_submission
-                        where user_id = ? and not is_delayed_check
+                        where user_id = ? and not is_delayed_check and first_attempt
                         """)
                 .param(userId)
                 .query((rs, n) -> new Rate(rs.getInt("correct"), rs.getInt("total")))
@@ -106,7 +106,7 @@ public class ReportController {
         List<ConfidenceRate> found = jdbc.sql("""
                         select confidence, count(*) filter (where correct) as correct, count(*) as total
                         from answer_submission
-                        where user_id = ?
+                        where user_id = ? and first_attempt
                         group by confidence
                         """)
                 .param(userId)

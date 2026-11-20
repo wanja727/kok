@@ -36,6 +36,9 @@ public class AnswerSubmission {
     @Column(name = "is_delayed_check")
     private boolean delayedCheck;
 
+    /** 이 문제를 처음 푼 답인지. 기록 화면의 정답률은 첫 시도만 센다 (ADR-021) */
+    private boolean firstAttempt;
+
     private LocalDate serviceDate;
 
     private Instant submittedAt;
@@ -44,7 +47,7 @@ public class AnswerSubmission {
     }
 
     public AnswerSubmission(Long userId, Long questionVersionId, UUID clientSubmissionId, String selected,
-            Confidence confidence, boolean correct, boolean delayedCheck, LocalDate serviceDate,
+            Confidence confidence, boolean correct, boolean delayedCheck, boolean firstAttempt, LocalDate serviceDate,
             Instant submittedAt) {
         this.userId = userId;
         this.questionVersionId = questionVersionId;
@@ -53,6 +56,7 @@ public class AnswerSubmission {
         this.confidence = confidence;
         this.correct = correct;
         this.delayedCheck = delayedCheck;
+        this.firstAttempt = firstAttempt;
         this.serviceDate = serviceDate;
         this.submittedAt = submittedAt;
     }
@@ -87,6 +91,10 @@ public class AnswerSubmission {
 
     public boolean isDelayedCheck() {
         return delayedCheck;
+    }
+
+    public boolean isFirstAttempt() {
+        return firstAttempt;
     }
 
     public LocalDate getServiceDate() {

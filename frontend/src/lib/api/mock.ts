@@ -185,8 +185,12 @@ function recordCheck(conceptId: number, correct: boolean, sure: boolean) {
   }
 }
 
-/** 오늘 레슨에서 맞힌 답 수. 같은 날 3번 맞히면 배운 날 기준을 통과한다 (백엔드와 같은 규칙) */
-const lessonCorrectToday: Record<number, number> = {};
+/** 오늘 레슨에서 맞힌 문제. 개념의 레슨 문제를 모두 맞히면 배운 날 기준을 통과한다 (백엔드와 같은 규칙, ADR-021) */
+const lessonCorrectToday: Record<number, Set<number>> = {};
+
+/** 연습에 낸 문제 순서. 가장 오래전에 낸 문제를 먼저 낸다 (백엔드와 같은 규칙) */
+const lastSeen = new Map<number, number>();
+let seenClock = 0;
 
 /** 같은 clientSubmissionId로 다시 보내면 처음 결과를 돌려준다 (백엔드와 같은 규칙) */
 const submitted = new Map<string, SubmissionResult>();
@@ -203,12 +207,15 @@ function delay<T>(value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), 150));
 }
 
-/** 처음 푼 개념은 배우는 중(0단계)으로 만들고, 오늘 3번 맞히면 1단계로 올려 3일 뒤 확인을 잡는다 */
-function recordLessonAnswer(conceptId: number, correct: boolean) {
+/** 처음 푼 개념은 배우는 중(0단계)으로 만들고, 레슨 문제를 오늘 모두 맞히면 1단계로 올려 3일 뒤 확인을 잡는다 */
+function recordLessonAnswer(q: MockQuestion, correct: boolean) {
+  const { conceptId } = q;
   progress[conceptId] ??= { stage: 0, learnedDaysAgo: 0, dueInDays: 0, sureWrong: false };
   if (!correct || progress[conceptId].stage > 0) return;
-  lessonCorrectToday[conceptId] = (lessonCorrectToday[conceptId] ?? 0) + 1;
-  if (lessonCorrectToday[conceptId] >= 3) {
+  const solved = (lessonCorrectToday[conceptId] ??= new Set());
+  solved.add(q.questionVersionId);
+  const all = questions.filter((it) => it.conceptId === conceptId && it.lessonId === q.lessonId);
+  if (all.every((it) => solved.has(it.questionVersionId))) {
     progress[conceptId] = { stage: 1, learnedDaysAgo: 0, dueInDays: 3, sureWrong: false };
   }
 }
@@ -274,6 +281,16 @@ export const mockApi: RetrievoApi = {
       }),
     ),
 
+  practiceQuestion: async (conceptId) => {
+    if ((progress[conceptId]?.stage ?? 0) < 1) throw new Error("연습할 수 있는 개념이 아니다");
+    const candidates = questions.filter((it) => it.conceptId === conceptId);
+    const q = [...candidates].sort(
+      (a, b) => (lastSeen.get(a.questionVersionId) ?? -1) - (lastSeen.get(b.questionVersionId) ?? -1),
+    )[0];
+    if (!q) throw new Error("연습할 문제가 없다");
+    return delay(view(q));
+  },
+
   logout: () => delay(undefined),
 
   me: () => delay({ id: 1, nickname: "me", joinedOn: daysFromToday(-30), days: 31 }),
@@ -313,8 +330,10 @@ export const mockApi: RetrievoApi = {
     if (!q) throw new Error("없는 문제다");
 
     const correct = isCorrect(q.type, request.selected, q.answer);
-    if (request.mode === "LESSON") recordLessonAnswer(q.conceptId, correct);
-    else recordCheck(q.conceptId, correct, request.confidence === "SURE");
+    lastSeen.set(q.questionVersionId, seenClock++);
+    if (request.mode === "LESSON") recordLessonAnswer(q, correct);
+    else if (request.mode === "DELAYED_CHECK") recordCheck(q.conceptId, correct, request.confidence === "SURE");
+    // PRACTICE는 기록만 하고 일정을 바꾸지 않는다
 
     const result: SubmissionResult = {
       submissionId: nextSubmissionId++,

@@ -33,7 +33,8 @@ class ConceptProgresses {
 
     /**
      * 레슨에서 낸 답을 반영한다. 처음 푼 개념이면 배우는 중(0단계)으로 만들고,
-     * 배우는 중인 개념을 오늘 3번 맞혔으면 1단계로 올려 3일 뒤 확인을 잡는다.
+     * 배우는 중인 개념의 판정 문제를 오늘 모두 한 번씩 맞혔으면 1단계로 올려 3일 뒤 확인을 잡는다 (ADR-021).
+     * 틀린 문제는 화면이 다시 내므로, 맞힐 때까지 풀면 그날 기준을 넘는다.
      * 이미 1단계 이상인 개념은 레슨에서 다시 풀어도 일정이 바뀌지 않는다.
      */
     void recordLessonAnswer(long userId, long conceptId, boolean correct, LocalDate today, Instant now) {
@@ -51,18 +52,24 @@ class ConceptProgresses {
         if (stage != ReviewSchedule.LEARNING) {
             return;
         }
-        // 방금 저장한 이 답도 센다 (같은 트랜잭션)
-        int correctToday = jdbc.sql("""
-                        select count(*) from answer_submission s
-                        join question_version v on v.id = s.question_version_id
-                        join question q on q.id = v.question_id
-                        where s.user_id = ? and q.concept_id = ? and s.service_date = ?
-                          and s.correct and not s.is_delayed_check
+        // 레슨에 나오는 판정 문제 수와, 그중 오늘 맞힌 문제 수. 방금 저장한 이 답도 센다 (같은 트랜잭션)
+        record Count(int total, int correctToday) {
+        }
+        Count count = jdbc.sql("""
+                        select count(*) as total,
+                               count(*) filter (where exists (
+                                   select 1 from answer_submission s
+                                   join question_version v on v.id = s.question_version_id
+                                   where v.question_id = q.id and s.user_id = ? and s.service_date = ?
+                                     and s.correct and not s.is_delayed_check
+                               )) as correct_today
+                        from question q
+                        where q.concept_id = ? and q.status = 'REVIEWED' and q.purpose = 'JUDGMENT'
                         """)
-                .params(userId, conceptId, today)
-                .query(Integer.class)
+                .params(userId, today, conceptId)
+                .query((rs, n) -> new Count(rs.getInt("total"), rs.getInt("correct_today")))
                 .single();
-        if (correctToday >= ReviewSchedule.CORRECT_TO_LEARN) {
+        if (ReviewSchedule.learnedToday(count.total(), count.correctToday())) {
             ReviewSchedule.Next next = ReviewSchedule.learned(today);
             jdbc.sql("""
                             update concept_progress
@@ -150,6 +157,33 @@ class ConceptProgresses {
                             rs.getBoolean("sure_wrong"), graduatedAt == null ? null : graduatedAt.toInstant());
                 })
                 .list();
+    }
+
+    /** 이 사용자가 이 문제(버전과 상관없이)를 레슨이나 연습에서 이미 푼 적이 있는지. 지연 확인 답은 세지 않는다 */
+    boolean answeredBefore(long userId, long questionVersionId) {
+        return jdbc.sql("""
+                        select exists (
+                            select 1 from answer_submission s
+                            join question_version v on v.id = s.question_version_id
+                            where s.user_id = ? and not s.is_delayed_check
+                              and v.question_id = (select question_id from question_version where id = ?)
+                        )
+                        """)
+                .params(userId, questionVersionId)
+                .query(Boolean.class)
+                .single();
+    }
+
+    /** 배운 날 기준을 넘은 개념인지 (1단계 이상, 졸업 포함) */
+    boolean learned(long userId, long conceptId) {
+        return jdbc.sql("""
+                        select exists (
+                            select 1 from concept_progress where user_id = ? and concept_id = ? and stage >= 1
+                        )
+                        """)
+                .params(userId, conceptId)
+                .query(Boolean.class)
+                .single();
     }
 
     private int lockStage(long userId, long conceptId) {
