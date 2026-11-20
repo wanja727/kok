@@ -10,14 +10,15 @@ const LETTERS = "ABCDEFGH";
 
 export function ChooseStep({
   question: q,
-  draft,
+  context,
   selected,
   confidence,
   onSelect,
   onConfidence,
 }: {
   question: QuestionView;
-  draft: string;
+  /** 질문 위에 작게 보이는 맥락. 예: "JPA · N+1 문제 · 틀렸던 문제 다시" */
+  context: string;
   selected: string | null;
   confidence: Confidence | null;
   onSelect: (selected: string | null) => void;
@@ -25,12 +26,8 @@ export function ChooseStep({
 }) {
   return (
     <div className="pb-4">
-      <h1 className="mx-6 mt-8 text-[19px] leading-normal font-semibold tracking-[-0.4px]">{q.body}</h1>
-      {draft.trim() && (
-        <div className="mx-6 mt-3 text-[13px] text-muted">
-          먼저 적은 답 <span className="font-semibold text-ink">{draft.trim()}</span>
-        </div>
-      )}
+      <div className="px-6 pt-8 text-[13px] text-muted">{context}</div>
+      <h1 className="mx-6 mt-2.5 text-[19px] leading-normal font-semibold tracking-[-0.4px]">{q.body}</h1>
 
       {q.type === "LINE_PICK" && q.code ? (
         <LinePick code={q.code} selected={selected} onSelect={onSelect} />
