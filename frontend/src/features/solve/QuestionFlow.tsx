@@ -20,6 +20,7 @@ export function QuestionFlow({
   mode,
   topBar,
   nextLabel,
+  nextHint,
   onAnswered,
   onNext,
 }: {
@@ -28,6 +29,8 @@ export function QuestionFlow({
   mode: SubmissionMode;
   topBar: ReactNode;
   nextLabel: string;
+  /** 해설 화면에서 다음 버튼 아래에 붙이는 안내 (예: 틀린 문제는 뒤에서 다시 나온다) */
+  nextHint?: string;
   onAnswered: (result: SubmissionResult) => void;
   onNext: () => void;
 }) {
@@ -130,6 +133,7 @@ export function QuestionFlow({
         >
           {nextLabel}
         </PrimaryButton>
+        {nextHint && <p className="pt-2 text-center text-xs text-soft">{nextHint}</p>}
       </BottomActions>
     </main>
   );

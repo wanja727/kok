@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { LessonDetail, LessonSteps, QuestionView, SubmissionResult } from "@/lib/api";
-import { QuestionFlow } from "../../solve/QuestionFlow";
+import type { LessonDetail, LessonSteps, QuestionView } from "@/lib/api";
+import { RetrySolve, type RetrySummary } from "../../solve/RetrySolve";
 import { BodyTopBar, STEP_NAMES, StepNav } from "./parts";
 import {
   EMPTY_RECALL,
@@ -17,7 +17,7 @@ import {
 
 type ExplainKey = "background" | "pitfall" | "fix";
 
-/** 단계 번호(1부터) → 본문 항목. 6(확인)은 레슨의 판정 문제를 푼다 */
+/** 단계 번호(1부터) → 본문 항목. 6(확인)은 레슨의 판정 문제를 모두 맞힐 때까지 푼다 (ADR-021) */
 const EXPLAIN_AT: Record<number, ExplainKey> = { 2: "background", 4: "pitfall", 5: "fix" };
 
 /**
@@ -33,7 +33,7 @@ export function LessonBody({
   lesson: LessonDetail;
   steps: LessonSteps;
   questions: QuestionView[];
-  onFinish: (results: SubmissionResult[]) => void;
+  onFinish: (summary: RetrySummary) => void;
 }) {
   const [step, setStepState] = useState(1);
   const [predicted, setPredicted] = useState<number | null>(null);
@@ -44,8 +44,8 @@ export function LessonBody({
     fix: EMPTY_RECALL,
   });
   const [guesses, setGuesses] = useState<(number | null)[]>(() => steps.practice.runs.map(() => null));
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [results, setResults] = useState<SubmissionResult[]>([]);
+  // 확인 단계를 마치면 요약을 둔다. 앞 단계로 갔다 와도 다시 풀지 않는다
+  const [summary, setSummary] = useState<RetrySummary | null>(null);
   const [interview, setInterview] = useState<RecallState>(EMPTY_RECALL);
   const [checked, setChecked] = useState<boolean[]>(() => steps.interview.points.map(() => false));
 
@@ -122,19 +122,18 @@ export function LessonBody({
     );
   }
 
-  if (step === 6) {
-    const question = questions[questionIndex];
-    const last = questionIndex + 1 >= questions.length;
+  if (step === 6 && summary === null) {
     return (
-      <QuestionFlow
-        key={question.questionVersionId}
-        question={question}
+      <RetrySolve
+        questions={questions}
         context={`${lesson.unit} · ${lesson.title}`}
         mode="LESSON"
-        topBar={top(`문제 ${questionIndex + 1} / ${questions.length}`)}
-        nextLabel={last ? nextName(6) : "다음 문제"}
-        onAnswered={(result) => setResults((rs) => [...rs, result])}
-        onNext={() => (last ? go(7) : setQuestionIndex(questionIndex + 1))}
+        topBar={(solved, total) => top(`${solved} / ${total} 맞힘`)}
+        finishLabel={nextName(6)}
+        onFinish={(done) => {
+          setSummary(done);
+          go(7);
+        }}
       />
     );
   }
@@ -150,7 +149,7 @@ export function LessonBody({
         onToggle={(i) => setChecked((cs) => cs.map((c, j) => (j === i ? !c : c)))}
       />
       {interview.revealed ? (
-        <StepNav onNext={() => onFinish(results)} nextLabel="레슨 마치기" />
+        <StepNav onNext={() => onFinish(summary ?? { total: 0, firstCorrect: 0 })} nextLabel="레슨 마치기" />
       ) : (
         <StepNav
           onNext={() => setInterview({ ...interview, revealed: true })}

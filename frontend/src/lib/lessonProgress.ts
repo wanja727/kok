@@ -60,7 +60,7 @@ export function byNextCheck(a: LessonProgress, b: LessonProgress): number {
 
 /** 관리 중인 레슨 한 줄 설명: 언제 다시 묻는지와 그 이유 */
 export function nextCheckLabel(p: LessonProgress, today: string): string {
-  if (p.passed === 0 || p.dueDate === null) return "배우는 중 · 같은 날 3번 맞히면 3일 뒤 확인";
+  if (p.passed === 0 || p.dueDate === null) return "배우는 중 · 같은 날 모두 맞히면 3일 뒤 확인";
   const days = daysBetween(today, p.dueDate);
   const when = days <= 0 ? "오늘 확인" : `${days}일 뒤 확인`;
   if (p.sureWrong) return `${when} · 확실했는데 틀림`;

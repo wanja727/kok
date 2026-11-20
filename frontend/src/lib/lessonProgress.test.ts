@@ -52,7 +52,7 @@ describe("nextCheckLabel", () => {
 
   it("언제 다시 묻는지와 그 이유를 보여준다", () => {
     expect(nextCheckLabel(managed({ stage: 0, dueDate: null, learnedOn: null }), TODAY)).toBe(
-      "배우는 중 · 같은 날 3번 맞히면 3일 뒤 확인",
+      "배우는 중 · 같은 날 모두 맞히면 3일 뒤 확인",
     );
     expect(nextCheckLabel(managed({ dueDate: TODAY }), TODAY)).toBe("오늘 확인");
     expect(nextCheckLabel(managed({ dueDate: "2026-11-15" }), TODAY)).toBe("오늘 확인");

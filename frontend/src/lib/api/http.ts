@@ -62,6 +62,7 @@ export const httpApi: RetrievoApi = {
   lesson: (lessonId: number) => request<LessonDetail>(`/api/lessons/${lessonId}`),
   lessonQuestions: (lessonId: number) => request<QuestionView[]>(`/api/lessons/${lessonId}/questions`),
   concepts: () => request<ConceptStatus[]>("/api/me/concepts"),
+  practiceQuestion: (conceptId: number) => request<QuestionView>(`/api/me/concepts/${conceptId}/practice-question`),
   report: () => request<Report>("/api/me/report"),
   me: () => request<Me>("/api/me"),
   logout: () => request<void>("/api/logout", { method: "POST" }),
