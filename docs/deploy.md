@@ -181,10 +181,30 @@ echo projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/prov
    - 오늘 화면
    - 문제 풀기
 
+## 6. 문제 파일 자동 배포 (dev-lessons)
+
+dev-lessons main에 문제 파일이 들어가면 자동으로 다시 배포하게 한다.
+- dev-lessons의 `Check questions` 워크플로가 검사를 통과하면 이 저장소에 `content-updated` 신호를 보낸다.
+- 이 저장소의 Backend 워크플로가 신호를 받아 테스트하고 배포한다.
+
+신호를 보내려면 토큰이 필요하다. 토큰이 없으면 신호를 건너뛰고, 검사는 그대로 통과한다.
+
+1. GitHub → Settings → Developer settings → **Fine-grained personal access tokens** → Generate new token
+   - Token name: `dev-lessons → retrievo 배포 신호`
+   - Expiration: 1년 (만료되면 다시 만들어 2단계를 반복한다)
+   - Repository access: **Only select repositories** → `wanja727/retrievo` 하나만
+   - Permissions → Repository permissions → **Contents: Read and write**. 신호(repository dispatch)를 보내는 데 필요한 권한이다. 나머지는 두지 않는다.
+2. dev-lessons 저장소 → Settings → Secrets and variables → Actions → **Secrets** 탭 → New repository secret
+   - Name: `RETRIEVO_DISPATCH_TOKEN`
+   - Secret: 1번에서 만든 토큰
+3. 확인: dev-lessons에서 문제 파일을 고쳐 main에 병합한다.
+   - dev-lessons Actions의 `Check questions`에서 `notify-retrievo`가 통과한다.
+   - 이 저장소 Actions에 `repository_dispatch`로 시작한 Backend 실행이 생긴다.
+
 ## 운영 메모
 
 - **콜드 스타트:** 한동안 요청이 없다가 처음 들어온 요청은 서버가 켜지는 동안 10초 안팎 기다린다. 그 뒤로는 빠르다. 비용 0원을 위해 고른 부분이다. 최소 1대를 켜 두면 월 수천 원이 든다.
-- **문제 파일이 바뀌었을 때:** Actions → Backend → Run workflow로 다시 배포한다. dev-lessons에서 자동으로 배포하게 하는 것은 아직 연결하지 않았다. 연결하면 워크플로가 이미 `repository_dispatch`(`content-updated`)를 받는다.
+- **문제 파일이 바뀌었을 때:** dev-lessons main에 들어가면 자동으로 다시 배포한다(6단계). 토큰이 만료됐거나 급할 때는 Actions → Backend → Run workflow로 손으로 배포한다.
 - **DB 스키마:** 앱 테이블은 Supabase의 `retrievo` 스키마에 있다. Supabase 대시보드 Table Editor에서는 스키마 선택을 `retrievo`로 바꿔야 보인다.
 - **비용 상한:**
   - Cloud Run은 최대 1대만 띄운다.
