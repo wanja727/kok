@@ -98,7 +98,7 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
             </a>
           </Step>
           <Step n={2} title={questions.length > 1 ? `문제 ${questions.length}개를 모두 맞힐 때까지` : "문제를 맞힐 때까지"}>
-            객관식은 보기를 보기 전에 내 답을 먼저 적어요. 틀린 문제는 해설을 읽고, 다른 문제를 푼 뒤에 다시 풀어요.
+            답과 확신도를 고르면 해설이 열려요. 틀린 문제는 해설을 읽고, 다른 문제를 푼 뒤에 다시 풀어요.
           </Step>
           <Step n={3} title="3일 뒤 다시 확인">
             {learned
